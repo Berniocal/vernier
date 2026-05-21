@@ -46,6 +46,25 @@
     </select>
     <p class="small">Některé senzory nemusí všechny rychlosti podporovat. Když to nepůjde, zkus pomalejší periodu.</p>
 
+    <div id="derivedControls" style="display:none">
+      <label>Dopočítané veličiny</label>
+      <div class="sensor">
+        <label><input type="checkbox" id="calcVelocity" checked> Dopočítat rychlost z kanálu polohy</label>
+        <div class="meta">Zobrazí se jen u Go Direct Motion / kanálu Poloha, Position nebo Distance. Počítá se numericky jako \(v = \Delta s / \Delta t\).</div>
+      </div>
+      <div class="sensor">
+        <label><input type="checkbox" id="calcAcceleration" checked> Dopočítat zrychlení z rychlosti</label>
+        <div class="meta">Počítá se jako \(a = \Delta v / \Delta t\). Hodnoty jsou lehce vyhlazené, aby graf tolik nešuměl.</div>
+      </div>
+      <label for="deriveWindow">Vyhlazení výpočtu</label>
+      <select id="deriveWindow">
+        <option value="1">bez vyhlazení</option>
+        <option value="3" selected>3 body</option>
+        <option value="5">5 bodů</option>
+        <option value="7">7 bodů</option>
+      </select>
+    </div>
+
     <div class="row" style="margin-top:10px">
       <button id="start" disabled>Start</button>
       <button id="stop" disabled>Stop</button>
@@ -84,14 +103,66 @@
 <script>
 'use strict';
 const $ = id => document.getElementById(id);
-const state = { device:null, sensors:[], active:[], running:false, rows:[], t0:0, lastDraw:0, maxRowsInTable:250 };
+const state = { device:null, sensors:[], active:[], running:false, rows:[], t0:0, lastDraw:0, maxRowsInTable:250, derivedKeys:[], hasMotion:false };
 const colors = ['#38bdf8','#a7f3d0','#fbbf24','#fb7185','#c084fc','#f472b6','#93c5fd','#bef264'];
-const els = {connect:$('connect'),disconnect:$('disconnect'),start:$('start'),stop:$('stop'),zero:$('zero'),clear:$('clear'),csv:$('csv'),period:$('period'),status:$('status'),sensors:$('sensors'),legend:$('legend'),stats:$('stats'),table:$('dataTable'),count:$('count'),canvas:$('chart'),subtitle:$('subtitle'),connDot:$('connDot')};
+const els = {connect:$('connect'),disconnect:$('disconnect'),start:$('start'),stop:$('stop'),zero:$('zero'),clear:$('clear'),csv:$('csv'),period:$('period'),derivedControls:$('derivedControls'),calcVelocity:$('calcVelocity'),calcAcceleration:$('calcAcceleration'),deriveWindow:$('deriveWindow'),status:$('status'),sensors:$('sensors'),legend:$('legend'),stats:$('stats'),table:$('dataTable'),count:$('count'),canvas:$('chart'),subtitle:$('subtitle'),connDot:$('connDot')};
 const ctx = els.canvas.getContext('2d');
 function log(msg){ els.status.textContent = msg; }
 function setConnected(on){ els.connDot.classList.toggle('on',on); els.disconnect.disabled=!on; els.start.disabled=!on; els.zero.disabled=!on; els.clear.disabled=!on; }
 function fmt(x,d=3){ if(x===null||x===undefined||Number.isNaN(Number(x))) return ''; return Number(x).toLocaleString('cs-CZ',{maximumFractionDigits:d}); }
 function sensorLabel(s){ return `${s.name || 'kanál'}${s.unit ? ' ['+s.unit+']':''}`; }
+function valueKeys(){ return [...state.active.map(sensorLabel), ...state.derivedKeys]; }
+function unitForVelocity(unit){ return unit ? unit.replace(/\]$/,'') + '*s⁻¹]' : '[jedn.*s⁻¹]'; }
+function unitForAcceleration(unit){ return unit ? unit.replace(/\]$/,'') + '*s⁻²]' : '[jedn.*s⁻²]'; }
+function derivedVelocityKey(s){ return `rychlost z ${s.name || 'kanál'} ${unitForVelocity(s.unit || '')}`; }
+function derivedAccelerationKey(s){ return `zrychlení z ${s.name || 'kanál'} ${unitForAcceleration(s.unit || '')}`; }
+function isMotionChannel(s){
+  const txt = ((s.name||'') + ' ' + (s.unit||'') + ' ' + (s.number ?? '')).toLowerCase();
+  return /(motion|position|distance|poloha|vzd[aá]lenost|dráha|draha)/i.test(txt);
+}
+function detectMotion(){
+  const deviceName = ((state.device && state.device.name) || '').toLowerCase();
+  state.hasMotion = /motion/.test(deviceName) || state.sensors.some(isMotionChannel);
+  if(els.derivedControls) els.derivedControls.style.display = state.hasMotion ? '' : 'none';
+  if(!state.hasMotion) state.derivedKeys = [];
+  return state.hasMotion;
+}
+function recalcDerived(){
+  state.derivedKeys = [];
+  if(!state.hasMotion || !state.active.length) return;
+  const source = pickPositionChannel();
+  const srcKey = sensorLabel(source);
+  const vKey = derivedVelocityKey(source);
+  const aKey = derivedAccelerationKey(source);
+  const wantV = els.calcVelocity && els.calcVelocity.checked;
+  const wantA = els.calcAcceleration && els.calcAcceleration.checked;
+  if(wantV) state.derivedKeys.push(vKey);
+  if(wantA) state.derivedKeys.push(aKey);
+  const win = Math.max(1, Number(els.deriveWindow ? els.deriveWindow.value : 3));
+  for(let i=0;i<state.rows.length;i++){
+    delete state.rows[i][vKey]; delete state.rows[i][aKey];
+    const j = Math.max(0, i-win);
+    const r0 = state.rows[j], r1 = state.rows[i];
+    const dt = r1.t - r0.t;
+    if(dt>0 && Number.isFinite(r1[srcKey]) && Number.isFinite(r0[srcKey])){
+      const v = (r1[srcKey] - r0[srcKey]) / dt;
+      if(wantV) r1[vKey] = v;
+      if(wantA){
+        const k = Math.max(0, j-win);
+        const rPrev = state.rows[k];
+        if(rPrev && Number.isFinite(rPrev[vKey]) && (r1.t-rPrev.t)>0){ r1[aKey] = (v - rPrev[vKey])/(r1.t-rPrev.t); }
+        else if(i>1){
+          const rp = state.rows[i-1];
+          if(Number.isFinite(rp[vKey]) && (r1.t-rp.t)>0) r1[aKey] = (v-rp[vKey])/(r1.t-rp.t);
+        }
+      }
+    }
+  }
+}
+function pickPositionChannel(){
+  return state.active.find(isMotionChannel) || state.sensors.find(isMotionChannel) || state.active[0];
+}
+
 async function connect(){
   try{
     if(!window.godirect){ throw new Error('Nenačetla se knihovna godirect-js. Zkontroluj internet nebo ulož knihovnu lokálně.'); }
@@ -103,6 +174,9 @@ async function connect(){
     state.device = device;
     state.sensors = (device.sensors || []).slice();
     state.active = state.sensors.filter(s => s.enabled).slice(0,2);
+    detectMotion();
+    const motionSensor = state.sensors.find(isMotionChannel);
+    if(state.hasMotion && motionSensor && !state.active.includes(motionSensor)){ state.active = [motionSensor, ...state.active].slice(0,2); motionSensor.enabled = true; }
     if(!state.active.length && state.sensors.length){ state.active = [state.sensors[0]]; state.sensors[0].enabled = true; }
     state.sensors.forEach((s,idx)=>{ s._idx=idx; s.on('value-changed', onValueChanged); });
     renderSensorList(); renderLegend(); renderStats(); renderTableHeader(); setConnected(true);
@@ -114,7 +188,7 @@ function renderSensorList(){
   els.sensors.innerHTML = state.sensors.map((s,i)=>`<div class="sensor"><label><input type="checkbox" data-i="${i}" ${state.active.includes(s)?'checked':''}> <span>${s.name || 'Kanál '+i}</span></label><div class="meta">jednotka: ${s.unit || '—'} · číslo: ${s.number ?? i}</div></div>`).join('');
   els.sensors.querySelectorAll('input').forEach(cb=>cb.addEventListener('change',()=>{
     state.active = Array.from(els.sensors.querySelectorAll('input:checked')).map(x=>state.sensors[Number(x.dataset.i)]);
-    renderLegend(); renderStats(); renderTableHeader(); draw();
+    detectMotion(); recalcDerived(); renderLegend(); renderStats(); renderTableHeader(); draw();
   }));
 }
 async function start(){
@@ -134,7 +208,7 @@ async function stop(){
   try{ if(state.device && typeof state.device.stop === 'function') await state.device.stop(); }catch(e){}
   log('Měření zastaveno.');
 }
-async function disconnect(){ await stop(); try{ if(state.device && typeof state.device.close === 'function') await state.device.close(); }catch(e){} state.device=null; state.sensors=[]; state.active=[]; setConnected(false); log('Odpojeno.'); renderSensorList(); }
+async function disconnect(){ await stop(); try{ if(state.device && typeof state.device.close === 'function') await state.device.close(); }catch(e){} state.device=null; state.sensors=[]; state.active=[]; state.hasMotion=false; detectMotion(); setConnected(false); log('Odpojeno.'); renderSensorList(); }
 function zero(){ state.t0 = performance.now(); state.rows=[]; renderTableHeader(); draw(); }
 function clearData(){ state.rows=[]; updateTable(); draw(); }
 function onValueChanged(){
@@ -142,41 +216,42 @@ function onValueChanged(){
   const t = (performance.now() - state.t0)/1000;
   const row = {t}; state.active.forEach(s=> row[sensorLabel(s)] = Number(s.value));
   state.rows.push(row); if(state.rows.length>10000) state.rows.shift();
+  recalcDerived();
   if(performance.now()-state.lastDraw>80){ state.lastDraw=performance.now(); updateUI(); }
 }
 function loop(){ if(state.running){ updateUI(); requestAnimationFrame(loop); } }
 function updateUI(){ renderStats(); updateTable(); draw(); els.count.textContent = `${state.rows.length} řádků`; els.subtitle.textContent = state.rows.length ? `Poslední čas: ${fmt(state.rows.at(-1).t,2)} s` : 'Čekám na data…'; }
-function renderLegend(){ els.legend.innerHTML = state.active.map((s,i)=>`<span style="border-color:${colors[i%colors.length]}">${sensorLabel(s)}</span>`).join(''); }
+function renderLegend(){ recalcDerived(); els.legend.innerHTML = valueKeys().map((k,i)=>`<span style="border-color:${colors[i%colors.length]}">${k}</span>`).join(''); }
 function renderStats(){
   const last = state.rows.at(-1)||{};
-  els.stats.innerHTML = state.active.map((s,i)=>{ const key=sensorLabel(s); return `<div class="stat"><span class="small">${key}</span><b>${fmt(last[key])}</b></div>`; }).join('') || '<div class="small">Vyber aspoň jeden kanál.</div>';
+  const keys=valueKeys(); els.stats.innerHTML = keys.map((key,i)=>`<div class="stat"><span class="small">${key}</span><b>${fmt(last[key])}</b></div>`).join('') || '<div class="small">Vyber aspoň jeden kanál.</div>';
 }
-function renderTableHeader(){ const heads=['čas [s]',...state.active.map(sensorLabel)]; els.table.tHead.innerHTML='<tr>'+heads.map(h=>`<th>${h}</th>`).join('')+'</tr>'; updateTable(); }
+function renderTableHeader(){ recalcDerived(); const heads=['čas [s]',...valueKeys()]; els.table.tHead.innerHTML='<tr>'+heads.map(h=>`<th>${h}</th>`).join('')+'</tr>'; updateTable(); }
 function updateTable(){
   const rows = state.rows.slice(-state.maxRowsInTable).reverse();
-  els.table.tBodies[0].innerHTML = rows.map(r=>`<tr><td>${fmt(r.t,3)}</td>${state.active.map(s=>`<td>${fmt(r[sensorLabel(s)])}</td>`).join('')}</tr>`).join('');
+  els.table.tBodies[0].innerHTML = rows.map(r=>`<tr><td>${fmt(r.t,3)}</td>${valueKeys().map(k=>`<td>${fmt(r[k])}</td>`).join('')}</tr>`).join('');
 }
 function draw(){
   const w=els.canvas.width,h=els.canvas.height,padL=70,padR=20,padT=28,padB=55; ctx.clearRect(0,0,w,h); ctx.fillStyle='#020617';ctx.fillRect(0,0,w,h);
   ctx.strokeStyle='#1e293b';ctx.lineWidth=1; for(let i=0;i<=8;i++){ const x=padL+i*(w-padL-padR)/8; line(x,padT,x,h-padB); const y=padT+i*(h-padT-padB)/8; line(padL,y,w-padR,y); }
   if(!state.rows.length||!state.active.length){ ctx.fillStyle='#94a3b8';ctx.font='28px system-ui';ctx.fillText('Čekám na data ze senzoru…',padL+30,h/2); return; }
   const data = state.rows.slice(-600); const tMin=data[0].t, tMax=data.at(-1).t || 1;
-  let vals=[]; state.active.forEach(s=>{ const k=sensorLabel(s); data.forEach(r=>{ if(Number.isFinite(r[k])) vals.push(r[k]); }); });
+  recalcDerived(); const keys=valueKeys(); let vals=[]; keys.forEach(k=>{ data.forEach(r=>{ if(Number.isFinite(r[k])) vals.push(r[k]); }); });
   let yMin=Math.min(...vals), yMax=Math.max(...vals); if(yMin===yMax){yMin-=1;yMax+=1;} const m=(yMax-yMin)*0.08; yMin-=m;yMax+=m;
   ctx.fillStyle='#cbd5e1';ctx.font='18px system-ui';ctx.fillText('t [s]',w/2,h-14); ctx.save();ctx.translate(18,h/2);ctx.rotate(-Math.PI/2);ctx.fillText('hodnota senzoru',0,0);ctx.restore();
   ctx.font='14px system-ui'; for(let i=0;i<=4;i++){ const t=tMin+i*(tMax-tMin)/4; const x=map(t,tMin,tMax,padL,w-padR); ctx.fillText(fmt(t,1),x-12,h-padB+24); const yv=yMin+i*(yMax-yMin)/4; const y=map(yv,yMin,yMax,h-padB,padT); ctx.fillText(fmt(yv,2),8,y+4); }
-  state.active.forEach((s,i)=>{ const k=sensorLabel(s); ctx.strokeStyle=colors[i%colors.length];ctx.lineWidth=3;ctx.beginPath(); let started=false; data.forEach(r=>{ const v=r[k]; if(!Number.isFinite(v)) return; const x=map(r.t,tMin,tMax,padL,w-padR); const y=map(v,yMin,yMax,h-padB,padT); if(!started){ctx.moveTo(x,y);started=true;} else ctx.lineTo(x,y); }); ctx.stroke(); });
+  keys.forEach((k,i)=>{ ctx.strokeStyle=colors[i%colors.length];ctx.lineWidth=3;ctx.beginPath(); let started=false; data.forEach(r=>{ const v=r[k]; if(!Number.isFinite(v)) return; const x=map(r.t,tMin,tMax,padL,w-padR); const y=map(v,yMin,yMax,h-padB,padT); if(!started){ctx.moveTo(x,y);started=true;} else ctx.lineTo(x,y); }); ctx.stroke(); });
   ctx.strokeStyle='#64748b';ctx.lineWidth=2;ctx.strokeRect(padL,padT,w-padL-padR,h-padT-padB);
 }
 function line(x1,y1,x2,y2){ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();}
 function map(v,a,b,c,d){ return b===a ? (c+d)/2 : c+(v-a)*(d-c)/(b-a); }
 function csv(){
-  const heads=['čas [s]',...state.active.map(sensorLabel)];
+  recalcDerived(); const heads=['čas [s]',...valueKeys()];
   const lines=[heads.join(';')];
   state.rows.forEach(r=> lines.push([r.t,...state.active.map(s=>r[sensorLabel(s)])].map(v=>String(v??'').replace('.',',')).join(';')));
   const blob=new Blob([lines.join('\n')],{type:'text/csv;charset=utf-8'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='go-direct-data.csv'; a.click(); URL.revokeObjectURL(a.href);
 }
-els.connect.onclick=connect; els.start.onclick=start; els.stop.onclick=stop; els.disconnect.onclick=disconnect; els.zero.onclick=zero; els.clear.onclick=clearData; els.csv.onclick=csv; els.autoscale.onclick=draw;
+els.connect.onclick=connect; els.start.onclick=start; els.stop.onclick=stop; els.disconnect.onclick=disconnect; els.zero.onclick=zero; els.clear.onclick=clearData; els.csv.onclick=csv; els.autoscale.onclick=draw; [els.calcVelocity,els.calcAcceleration,els.deriveWindow].forEach(el=>el && el.addEventListener('change',()=>{ recalcDerived(); renderLegend(); renderStats(); renderTableHeader(); draw(); }));
 if('serviceWorker' in navigator){ navigator.serviceWorker.register('./sw.js').catch(()=>{}); }
 draw();
 </script>
