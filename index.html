@@ -44,7 +44,7 @@
       <option value="500">500 ms (2 Hz)</option>
       <option value="1000">1 s</option>
     </select>
-    <p class="small">Některé senzory nemusí všechny rychlosti podporovat. Když to nepůjde, zkus pomalejší periodu.</p>
+    <p class="small" id="periodInfo">Po připojení se nabídka upraví podle toho, co senzor o podporované periodě hlásí.</p>
 
     <div id="derivedControls" style="display:none">
       <label>Dopočítané veličiny</label>
@@ -120,14 +120,77 @@
 <script>
 'use strict';
 const $ = id => document.getElementById(id);
-const state = { device:null, sensors:[], active:[], running:false, rows:[], t0:0, lastDraw:0, maxRowsInTable:250, derivedKeys:[], customVars:[], hasMotion:false, sampleIndex:0, periodSec:0.1, maxCatchUpRows:5 };
+const state = { device:null, sensors:[], active:[], running:false, rows:[], t0:0, lastDraw:0, maxRowsInTable:250, derivedKeys:[], customVars:[], hasMotion:false, sampleIndex:0, periodSec:0.1, maxCatchUpRows:5, supportedPeriods:[] };
 const colors = ['#38bdf8','#a7f3d0','#fbbf24','#fb7185','#c084fc','#f472b6','#93c5fd','#bef264'];
-const els = {connect:$('connect'),disconnect:$('disconnect'),start:$('start'),stop:$('stop'),zero:$('zero'),clear:$('clear'),csv:$('csv'),period:$('period'),derivedControls:$('derivedControls'),calcVelocity:$('calcVelocity'),calcAcceleration:$('calcAcceleration'),deriveWindow:$('deriveWindow'),customName:$('customName'),customUnit:$('customUnit'),customA:$('customA'),customOp:$('customOp'),customB:$('customB'),customNumber:$('customNumber'),customNumberWrap:$('customNumberWrap'),addCustom:$('addCustom'),clearCustom:$('clearCustom'),customList:$('customList'),status:$('status'),sensors:$('sensors'),legend:$('legend'),stats:$('stats'),table:$('dataTable'),count:$('count'),canvas:$('chart'),subtitle:$('subtitle'),connDot:$('connDot')};
+const els = {connect:$('connect'),disconnect:$('disconnect'),start:$('start'),stop:$('stop'),zero:$('zero'),clear:$('clear'),csv:$('csv'),period:$('period'),periodInfo:$('periodInfo'),derivedControls:$('derivedControls'),calcVelocity:$('calcVelocity'),calcAcceleration:$('calcAcceleration'),deriveWindow:$('deriveWindow'),customName:$('customName'),customUnit:$('customUnit'),customA:$('customA'),customOp:$('customOp'),customB:$('customB'),customNumber:$('customNumber'),customNumberWrap:$('customNumberWrap'),addCustom:$('addCustom'),clearCustom:$('clearCustom'),customList:$('customList'),status:$('status'),sensors:$('sensors'),legend:$('legend'),stats:$('stats'),table:$('dataTable'),count:$('count'),canvas:$('chart'),subtitle:$('subtitle'),connDot:$('connDot')};
 const ctx = els.canvas.getContext('2d');
 function log(msg){ els.status.textContent = msg; }
 function setConnected(on){ els.connDot.classList.toggle('on',on); els.disconnect.disabled=!on; els.start.disabled=!on; els.zero.disabled=!on; els.clear.disabled=!on; }
 function fmt(x,d=3){ if(x===null||x===undefined||Number.isNaN(Number(x))) return ''; return Number(x).toLocaleString('cs-CZ',{maximumFractionDigits:d}); }
 function sensorLabel(s){ return `${s.name || 'kanál'}${s.unit ? ' ['+s.unit+']':''}`; }
+
+function hzLabel(ms){ const hz = 1000 / ms; return `${ms} ms (${Number.isInteger(hz) ? hz : hz.toFixed(2).replace('.', ',')} Hz)`; }
+function uniqueSortedPeriods(list){ return [...new Set(list.map(Number).filter(x => Number.isFinite(x) && x > 0))].sort((a,b)=>a-b); }
+function readPossiblePeriodsFromObject(obj){
+  if(!obj) return [];
+  const out = [];
+  const keys = ['supportedMeasurementPeriods','validMeasurementPeriods','measurementPeriods','availableMeasurementPeriods','availablePeriods','supportedPeriods'];
+  for(const k of keys){
+    const v = obj[k];
+    if(Array.isArray(v)) out.push(...v);
+  }
+  const minKeys = ['minMeasurementPeriod','minimumMeasurementPeriod','minPeriod','minimumPeriod'];
+  const maxKeys = ['maxMeasurementPeriod','maximumMeasurementPeriod','maxPeriod','maximumPeriod'];
+  let min = null, max = null;
+  for(const k of minKeys){ if(Number.isFinite(Number(obj[k]))) min = Number(obj[k]); }
+  for(const k of maxKeys){ if(Number.isFinite(Number(obj[k]))) max = Number(obj[k]); }
+  if(min || max){
+    const candidates = [5,10,20,50,100,200,500,1000,2000,5000];
+    out.push(...candidates.filter(p => (!min || p >= min) && (!max || p <= max)));
+  }
+  return out;
+}
+async function configurePeriodOptions(){
+  const previous = Number(els.period.value) || 100;
+  const candidates = [5,10,20,50,100,200,500,1000,2000,5000];
+  let periods = [];
+  periods.push(...readPossiblePeriodsFromObject(state.device));
+  state.sensors.forEach(s => periods.push(...readPossiblePeriodsFromObject(s)));
+  periods = uniqueSortedPeriods(periods);
+
+  // Když knihovna Vernieru neprozradí seznam podporovaných period, zkusíme bezpečný test:
+  // požádáme senzor o běžné periody. Některé senzory chybu odmítnou, jiné hodnotu zaokrouhlí.
+  // Pokud neumíme ověřit skutečnou periodu, nenecháme si namluvit, že umí úplně všechno.
+  if(!periods.length && state.device && typeof state.device.setMeasurementPeriod === 'function'){
+    const ok = [];
+    for(const p of candidates){
+      try{
+        await state.device.setMeasurementPeriod(p);
+        const actual = Number(state.device.measurementPeriod || state.device.period || state.device.measurement_period || NaN);
+        if(Number.isFinite(actual)){
+          if(Math.abs(actual - p) < 0.001) ok.push(p);
+        }else{
+          // Bez ověření raději povolíme konzervativní školní periody, ne nejrychlejší 50 Hz.
+          if(p >= 50 && p <= 1000) ok.push(p);
+        }
+      }catch(e){ /* unsupported */ }
+    }
+    periods = uniqueSortedPeriods(ok);
+  }
+
+  if(!periods.length) periods = [100,200,500,1000];
+  state.supportedPeriods = periods;
+  els.period.innerHTML = periods.map(p => `<option value="${p}">${hzLabel(p)}</option>`).join('');
+  const selected = periods.includes(previous) ? previous : periods.includes(100) ? 100 : periods[0];
+  els.period.value = String(selected);
+  state.periodSec = selected / 1000;
+  if(els.periodInfo){
+    const fastest = periods[0];
+    els.periodInfo.textContent = periods.length
+      ? `Nabízím jen periody, které senzor hlásí nebo které prošly testem. Nejrychlejší dostupná volba: ${hzLabel(fastest)}.`
+      : 'Nepodařilo se zjistit podporované periody.';
+  }
+}
 function valueKeys(){ return [...state.active.map(sensorLabel), ...state.derivedKeys, ...state.customVars.map(v=>customVarKey(v))]; }
 function sourceKeys(){ return ['čas [s]', ...state.active.map(sensorLabel), ...state.derivedKeys]; }
 function rowValue(row,key){ return key === 'čas [s]' ? row.t : row[key]; }
@@ -248,6 +311,7 @@ async function connect(){
     catch(e){ device = await godirect.selectDevice(); }
     state.device = device;
     state.sensors = (device.sensors || []).slice();
+    await configurePeriodOptions();
     state.active = state.sensors.filter(s => s.enabled).slice(0,2);
     detectMotion();
     const motionSensor = state.sensors.find(isMotionChannel);
@@ -287,7 +351,7 @@ async function stop(){
   try{ if(state.device && typeof state.device.stop === 'function') await state.device.stop(); }catch(e){}
   log('Měření zastaveno.');
 }
-async function disconnect(){ await stop(); try{ if(state.device && typeof state.device.close === 'function') await state.device.close(); }catch(e){} state.device=null; state.sensors=[]; state.active=[]; state.hasMotion=false; detectMotion(); setConnected(false); log('Odpojeno.'); renderSensorList(); renderCustomSelectors(); renderCustomList(); }
+async function disconnect(){ await stop(); try{ if(state.device && typeof state.device.close === 'function') await state.device.close(); }catch(e){} state.device=null; state.sensors=[]; state.active=[]; state.hasMotion=false; state.supportedPeriods=[]; if(els.periodInfo) els.periodInfo.textContent='Po připojení se nabídka upraví podle toho, co senzor o podporované periodě hlásí.'; detectMotion(); setConnected(false); log('Odpojeno.'); renderSensorList(); renderCustomSelectors(); renderCustomList(); }
 function zero(){ state.t0 = performance.now(); state.sampleIndex = 0; state.rows=[]; renderTableHeader(); draw(); }
 function clearData(){ state.rows=[]; updateTable(); draw(); }
 function onValueChanged(){
@@ -347,6 +411,7 @@ function csv(){
   state.rows.forEach(r=> lines.push([r.t,...valueKeys().map(k=>r[k])].map(v=>String(v??'').replace('.',',')).join(';')));
   const blob=new Blob([lines.join('\n')],{type:'text/csv;charset=utf-8'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='go-direct-data.csv'; a.click(); URL.revokeObjectURL(a.href);
 }
+els.period.addEventListener('change',()=>{ state.periodSec = Number(els.period.value)/1000; });
 els.connect.onclick=connect; els.start.onclick=start; els.stop.onclick=stop; els.disconnect.onclick=disconnect; els.zero.onclick=zero; els.clear.onclick=clearData; els.csv.onclick=csv; els.autoscale.onclick=draw; els.addCustom.onclick=addCustomVar; els.clearCustom.onclick=()=>{ state.customVars=[]; recalcCustomVars(); renderCustomList(); renderLegend(); renderStats(); renderTableHeader(); draw(); }; els.customB.addEventListener('change',()=>{ els.customNumberWrap.style.display = els.customB.value === '__number__' ? '' : 'none'; }); [els.calcVelocity,els.calcAcceleration,els.deriveWindow].forEach(el=>el && el.addEventListener('change',()=>{ recalcDerived(); renderCustomSelectors(); recalcCustomVars(); renderLegend(); renderStats(); renderTableHeader(); draw(); })); renderCustomSelectors(); renderCustomList();
 if('serviceWorker' in navigator){ navigator.serviceWorker.register('./sw.js').catch(()=>{}); }
 draw();
