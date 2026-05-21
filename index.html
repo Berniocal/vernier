@@ -18,7 +18,7 @@
     .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}button,input,select{font:inherit}button{border:0;border-radius:14px;padding:10px 13px;background:#263247;color:var(--text);cursor:pointer}button.primary{background:linear-gradient(135deg,#0ea5e9,#22c55e);color:#00111a;font-weight:800}button.danger{background:#3b1f2a;color:#fecdd3}button:disabled{opacity:.45;cursor:not-allowed}label{display:block;font-weight:700;margin:12px 0 5px}input,select{width:100%;border-radius:13px;border:1px solid var(--line);background:#0f172a;color:var(--text);padding:10px}.small{font-size:13px;color:var(--muted)}
     #status{padding:10px 12px;border-radius:14px;background:#0f172a;border:1px solid var(--line);color:var(--muted);margin-top:10px;white-space:pre-wrap}.pill{display:inline-flex;gap:7px;align-items:center;border:1px solid var(--line);background:#0f172a;border-radius:999px;padding:7px 10px;margin:4px 4px 0 0}.dot{width:9px;height:9px;border-radius:50%;background:var(--danger)}.dot.on{background:var(--ok)}
     .sensor-list{display:grid;gap:8px;margin-top:8px}.sensor{border:1px solid var(--line);border-radius:14px;padding:10px;background:#0f172a}.sensor label{display:flex;gap:8px;align-items:flex-start;margin:0;font-weight:600}.sensor input{width:auto;margin-top:3px}.sensor .meta{font-size:12px;color:var(--muted);margin-left:24px}
-    canvas{width:100%;height:430px;background:#020617;border:1px solid #1e293b;border-radius:20px;display:block}.toolbar{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:10px;flex-wrap:wrap}.legend{display:flex;gap:8px;flex-wrap:wrap}.legend span{font-size:13px;color:#d1d5db;background:#0f172a;border:1px solid var(--line);padding:6px 8px;border-radius:999px}.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:12px}.stat{background:#0f172a;border:1px solid var(--line);border-radius:16px;padding:10px}.stat b{display:block;font-size:20px;margin-top:4px;overflow:hidden;text-overflow:ellipsis}.table-wrap{max-height:270px;overflow:auto;border-radius:16px;border:1px solid var(--line)}table{width:100%;border-collapse:collapse;font-size:13px}th,td{border-bottom:1px solid #1f2937;padding:8px;text-align:right;white-space:nowrap}th:first-child,td:first-child{text-align:left}th{position:sticky;top:0;background:#111827;color:#cbd5e1}.hint{border-left:4px solid var(--accent);padding:10px 12px;background:#0f172a;border-radius:12px;color:#cbd5e1;line-height:1.45}
+    canvas{width:100%;height:430px;background:#020617;border:1px solid #1e293b;border-radius:20px;display:block}.toolbar{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:10px;flex-wrap:wrap}.legend{display:flex;gap:8px;flex-wrap:wrap}.legend span{font-size:13px;color:#d1d5db;background:#0f172a;border:1px solid var(--line);padding:6px 8px;border-radius:999px}.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:12px}.stat{background:#0f172a;border:1px solid var(--line);border-radius:16px;padding:10px}.stat b{display:block;font-size:20px;margin-top:4px;overflow:hidden;text-overflow:ellipsis}.table-wrap{max-height:270px;overflow:auto;border-radius:16px;border:1px solid var(--line)}table{width:100%;border-collapse:collapse;font-size:13px}th,td{border-bottom:1px solid #1f2937;padding:8px;text-align:right;white-space:nowrap}th:first-child,td:first-child{text-align:left}th{position:sticky;top:0;background:#111827;color:#cbd5e1}.hint{border-left:4px solid var(--accent);padding:10px 12px;background:#0f172a;border-radius:12px;color:#cbd5e1;line-height:1.45}.mini-grid{display:grid;grid-template-columns:1fr 80px 1fr;gap:8px}.custom-list{display:grid;gap:8px;margin-top:10px}.custom-item{border:1px solid var(--line);background:#0f172a;border-radius:14px;padding:10px}.custom-item .top{display:flex;justify-content:space-between;gap:8px;align-items:center}.custom-item code{color:#a7f3d0}
     @media(max-width:900px){main{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,1fr)}canvas{height:360px}}
   </style>
 </head>
@@ -65,6 +65,23 @@
       </select>
     </div>
 
+    <label>Vlastní veličina</label>
+    <div class="sensor">
+      <div class="small" style="margin-bottom:8px">Vytvoř nový kanál výpočtem: A operace B. A i B mohou být čas nebo naměřené veličiny; B může být také číslo.</div>
+      <label for="customName">Název</label>
+      <input id="customName" placeholder="např. výkon, poměr, posunutá síla" />
+      <label for="customUnit">Jednotka</label>
+      <input id="customUnit" placeholder="např. W, N/s, m" />
+      <div class="mini-grid">
+        <div><label for="customA">A</label><select id="customA"></select></div>
+        <div><label for="customOp">operace</label><select id="customOp"><option value="+">+</option><option value="-">−</option><option value="*">·</option><option value="/">:</option></select></div>
+        <div><label for="customB">B</label><select id="customB"></select></div>
+      </div>
+      <div id="customNumberWrap" style="display:none"><label for="customNumber">Číslo B</label><input id="customNumber" type="number" step="any" value="1" /></div>
+      <div class="row" style="margin-top:10px"><button id="addCustom" type="button">Přidat vlastní veličinu</button><button id="clearCustom" type="button">Smazat vlastní</button></div>
+      <div id="customList" class="custom-list small">Zatím není vytvořená žádná vlastní veličina.</div>
+    </div>
+
     <div class="row" style="margin-top:10px">
       <button id="start" disabled>Start</button>
       <button id="stop" disabled>Stop</button>
@@ -103,15 +120,18 @@
 <script>
 'use strict';
 const $ = id => document.getElementById(id);
-const state = { device:null, sensors:[], active:[], running:false, rows:[], t0:0, lastDraw:0, maxRowsInTable:250, derivedKeys:[], hasMotion:false };
+const state = { device:null, sensors:[], active:[], running:false, rows:[], t0:0, lastDraw:0, maxRowsInTable:250, derivedKeys:[], customVars:[], hasMotion:false, sampleIndex:0, periodSec:0.1, maxCatchUpRows:5 };
 const colors = ['#38bdf8','#a7f3d0','#fbbf24','#fb7185','#c084fc','#f472b6','#93c5fd','#bef264'];
-const els = {connect:$('connect'),disconnect:$('disconnect'),start:$('start'),stop:$('stop'),zero:$('zero'),clear:$('clear'),csv:$('csv'),period:$('period'),derivedControls:$('derivedControls'),calcVelocity:$('calcVelocity'),calcAcceleration:$('calcAcceleration'),deriveWindow:$('deriveWindow'),status:$('status'),sensors:$('sensors'),legend:$('legend'),stats:$('stats'),table:$('dataTable'),count:$('count'),canvas:$('chart'),subtitle:$('subtitle'),connDot:$('connDot')};
+const els = {connect:$('connect'),disconnect:$('disconnect'),start:$('start'),stop:$('stop'),zero:$('zero'),clear:$('clear'),csv:$('csv'),period:$('period'),derivedControls:$('derivedControls'),calcVelocity:$('calcVelocity'),calcAcceleration:$('calcAcceleration'),deriveWindow:$('deriveWindow'),customName:$('customName'),customUnit:$('customUnit'),customA:$('customA'),customOp:$('customOp'),customB:$('customB'),customNumber:$('customNumber'),customNumberWrap:$('customNumberWrap'),addCustom:$('addCustom'),clearCustom:$('clearCustom'),customList:$('customList'),status:$('status'),sensors:$('sensors'),legend:$('legend'),stats:$('stats'),table:$('dataTable'),count:$('count'),canvas:$('chart'),subtitle:$('subtitle'),connDot:$('connDot')};
 const ctx = els.canvas.getContext('2d');
 function log(msg){ els.status.textContent = msg; }
 function setConnected(on){ els.connDot.classList.toggle('on',on); els.disconnect.disabled=!on; els.start.disabled=!on; els.zero.disabled=!on; els.clear.disabled=!on; }
 function fmt(x,d=3){ if(x===null||x===undefined||Number.isNaN(Number(x))) return ''; return Number(x).toLocaleString('cs-CZ',{maximumFractionDigits:d}); }
 function sensorLabel(s){ return `${s.name || 'kanál'}${s.unit ? ' ['+s.unit+']':''}`; }
-function valueKeys(){ return [...state.active.map(sensorLabel), ...state.derivedKeys]; }
+function valueKeys(){ return [...state.active.map(sensorLabel), ...state.derivedKeys, ...state.customVars.map(v=>customVarKey(v))]; }
+function sourceKeys(){ return ['čas [s]', ...state.active.map(sensorLabel), ...state.derivedKeys]; }
+function rowValue(row,key){ return key === 'čas [s]' ? row.t : row[key]; }
+function customVarKey(v){ return `${v.name}${v.unit ? ' ['+v.unit+']' : ''}`; }
 function unitForVelocity(unit){ return unit ? unit.replace(/\]$/,'') + '*s⁻¹]' : '[jedn.*s⁻¹]'; }
 function unitForAcceleration(unit){ return unit ? unit.replace(/\]$/,'') + '*s⁻²]' : '[jedn.*s⁻²]'; }
 function derivedVelocityKey(s){ return `rychlost z ${s.name || 'kanál'} ${unitForVelocity(s.unit || '')}`; }
@@ -163,6 +183,61 @@ function pickPositionChannel(){
   return state.active.find(isMotionChannel) || state.sensors.find(isMotionChannel) || state.active[0];
 }
 
+function renderCustomSelectors(){
+  const keys = sourceKeys();
+  const opts = keys.map(k=>`<option value="${escapeAttr(k)}">${escapeHtml(k)}</option>`).join('');
+  if(els.customA) els.customA.innerHTML = opts;
+  if(els.customB){
+    const old = els.customB.value;
+    els.customB.innerHTML = opts + '<option value="__number__">číslo</option>';
+    if([...els.customB.options].some(o=>o.value===old)) els.customB.value = old;
+    if(els.customNumberWrap) els.customNumberWrap.style.display = els.customB.value === '__number__' ? '' : 'none';
+  }
+}
+function escapeHtml(txt){ return String(txt).replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch])); }
+function escapeAttr(txt){ return escapeHtml(txt); }
+function addCustomVar(){
+  const name = (els.customName.value || '').trim() || 'vlastní veličina';
+  const unit = (els.customUnit.value || '').trim();
+  const a = els.customA.value;
+  const op = els.customOp.value;
+  const b = els.customB.value;
+  const num = Number(els.customNumber.value);
+  if(!a || !op || !b){ log('Nejdřív vyber A, operaci a B.'); return; }
+  if(b === '__number__' && !Number.isFinite(num)){ log('Číslo B není platné.'); return; }
+  state.customVars.push({ id: Date.now()+Math.random(), name, unit, a, op, b, num });
+  recalcCustomVars(); renderCustomList(); renderLegend(); renderStats(); renderTableHeader(); draw();
+}
+function removeCustomVar(id){
+  state.customVars = state.customVars.filter(v => String(v.id) !== String(id));
+  recalcCustomVars(); renderCustomList(); renderLegend(); renderStats(); renderTableHeader(); draw();
+}
+function renderCustomList(){
+  if(!els.customList) return;
+  if(!state.customVars.length){ els.customList.textContent = 'Zatím není vytvořená žádná vlastní veličina.'; return; }
+  els.customList.innerHTML = state.customVars.map(v=>{
+    const bTxt = v.b === '__number__' ? String(v.num).replace('.', ',') : v.b;
+    return `<div class="custom-item"><div class="top"><div><b>${escapeHtml(customVarKey(v))}</b><br><code>${escapeHtml(v.a)} ${escapeHtml(v.op)} ${escapeHtml(bTxt)}</code></div><button type="button" data-del-custom="${v.id}">Smazat</button></div></div>`;
+  }).join('');
+  els.customList.querySelectorAll('[data-del-custom]').forEach(btn=>btn.addEventListener('click',()=>removeCustomVar(btn.dataset.delCustom)));
+}
+function recalcCustomVars(){
+  for(const row of state.rows){
+    for(const v of state.customVars) delete row[customVarKey(v)];
+    for(const v of state.customVars){
+      const av = rowValue(row, v.a);
+      const bv = v.b === '__number__' ? v.num : rowValue(row, v.b);
+      if(!Number.isFinite(av) || !Number.isFinite(bv)) continue;
+      let out = NaN;
+      if(v.op === '+') out = av + bv;
+      if(v.op === '-') out = av - bv;
+      if(v.op === '*') out = av * bv;
+      if(v.op === '/' && bv !== 0) out = av / bv;
+      if(Number.isFinite(out)) row[customVarKey(v)] = out;
+    }
+  }
+}
+
 async function connect(){
   try{
     if(!window.godirect){ throw new Error('Nenačetla se knihovna godirect-js. Zkontroluj internet nebo ulož knihovnu lokálně.'); }
@@ -179,7 +254,7 @@ async function connect(){
     if(state.hasMotion && motionSensor && !state.active.includes(motionSensor)){ state.active = [motionSensor, ...state.active].slice(0,2); motionSensor.enabled = true; }
     if(!state.active.length && state.sensors.length){ state.active = [state.sensors[0]]; state.sensors[0].enabled = true; }
     state.sensors.forEach((s,idx)=>{ s._idx=idx; s.on('value-changed', onValueChanged); });
-    renderSensorList(); renderLegend(); renderStats(); renderTableHeader(); setConnected(true);
+    renderSensorList(); renderCustomSelectors(); renderCustomList(); renderLegend(); renderStats(); renderTableHeader(); setConnected(true);
     log(`Připojeno: ${device.name || 'Go Direct'}\nKanálů: ${state.sensors.length}\nVyber kanály a stiskni Start.`);
   }catch(err){ log('Nepodařilo se připojit: ' + (err.message || err)); }
 }
@@ -188,13 +263,17 @@ function renderSensorList(){
   els.sensors.innerHTML = state.sensors.map((s,i)=>`<div class="sensor"><label><input type="checkbox" data-i="${i}" ${state.active.includes(s)?'checked':''}> <span>${s.name || 'Kanál '+i}</span></label><div class="meta">jednotka: ${s.unit || '—'} · číslo: ${s.number ?? i}</div></div>`).join('');
   els.sensors.querySelectorAll('input').forEach(cb=>cb.addEventListener('change',()=>{
     state.active = Array.from(els.sensors.querySelectorAll('input:checked')).map(x=>state.sensors[Number(x.dataset.i)]);
-    detectMotion(); recalcDerived(); renderLegend(); renderStats(); renderTableHeader(); draw();
+    detectMotion(); recalcDerived(); renderCustomSelectors(); recalcCustomVars(); renderLegend(); renderStats(); renderTableHeader(); draw();
   }));
 }
 async function start(){
   if(!state.device) return;
   try{
-    state.running = true; state.t0 = performance.now(); els.start.disabled=true; els.stop.disabled=false; els.csv.disabled=false;
+    state.running = true;
+    state.t0 = performance.now();
+    state.sampleIndex = 0;
+    state.periodSec = Number(els.period.value) / 1000;
+    els.start.disabled=true; els.stop.disabled=false; els.csv.disabled=false;
     const period = Number(els.period.value);
     for(const s of state.sensors) s.enabled = state.active.includes(s);
     if(typeof state.device.setMeasurementPeriod === 'function') await state.device.setMeasurementPeriod(period);
@@ -208,25 +287,42 @@ async function stop(){
   try{ if(state.device && typeof state.device.stop === 'function') await state.device.stop(); }catch(e){}
   log('Měření zastaveno.');
 }
-async function disconnect(){ await stop(); try{ if(state.device && typeof state.device.close === 'function') await state.device.close(); }catch(e){} state.device=null; state.sensors=[]; state.active=[]; state.hasMotion=false; detectMotion(); setConnected(false); log('Odpojeno.'); renderSensorList(); }
-function zero(){ state.t0 = performance.now(); state.rows=[]; renderTableHeader(); draw(); }
+async function disconnect(){ await stop(); try{ if(state.device && typeof state.device.close === 'function') await state.device.close(); }catch(e){} state.device=null; state.sensors=[]; state.active=[]; state.hasMotion=false; detectMotion(); setConnected(false); log('Odpojeno.'); renderSensorList(); renderCustomSelectors(); renderCustomList(); }
+function zero(){ state.t0 = performance.now(); state.sampleIndex = 0; state.rows=[]; renderTableHeader(); draw(); }
 function clearData(){ state.rows=[]; updateTable(); draw(); }
 function onValueChanged(){
   if(!state.running || !state.active.length) return;
-  const t = (performance.now() - state.t0)/1000;
-  const row = {t}; state.active.forEach(s=> row[sensorLabel(s)] = Number(s.value));
-  state.rows.push(row); if(state.rows.length>10000) state.rows.shift();
+
+  // Důležité: Go Direct posílá událost "value-changed" pro jednotlivé kanály,
+  // ne jako dokonale hotový řádek tabulky. Kdybychom ukládali řádek při každé
+  // události, vzniknou duplicitní časy. Proto časovou osu vytváříme podle
+  // nastavené periody měření: 50 Hz → 0,00; 0,02; 0,04; 0,06…
+  const elapsed = (performance.now() - state.t0) / 1000;
+  const period = state.periodSec || (Number(els.period.value) / 1000) || 0.1;
+
+  let added = 0;
+  while((state.sampleIndex * period) <= elapsed + period * 0.25 && added < state.maxCatchUpRows){
+    const row = { t: Number((state.sampleIndex * period).toFixed(6)) };
+    state.active.forEach(s => row[sensorLabel(s)] = Number(s.value));
+    state.rows.push(row);
+    state.sampleIndex++;
+    added++;
+  }
+
+  if(!added) return;
+  if(state.rows.length>10000) state.rows.splice(0, state.rows.length-10000);
   recalcDerived();
+  recalcCustomVars();
   if(performance.now()-state.lastDraw>80){ state.lastDraw=performance.now(); updateUI(); }
 }
 function loop(){ if(state.running){ updateUI(); requestAnimationFrame(loop); } }
 function updateUI(){ renderStats(); updateTable(); draw(); els.count.textContent = `${state.rows.length} řádků`; els.subtitle.textContent = state.rows.length ? `Poslední čas: ${fmt(state.rows.at(-1).t,2)} s` : 'Čekám na data…'; }
-function renderLegend(){ recalcDerived(); els.legend.innerHTML = valueKeys().map((k,i)=>`<span style="border-color:${colors[i%colors.length]}">${k}</span>`).join(''); }
+function renderLegend(){ recalcDerived(); recalcCustomVars(); els.legend.innerHTML = valueKeys().map((k,i)=>`<span style="border-color:${colors[i%colors.length]}">${k}</span>`).join(''); }
 function renderStats(){
   const last = state.rows.at(-1)||{};
   const keys=valueKeys(); els.stats.innerHTML = keys.map((key,i)=>`<div class="stat"><span class="small">${key}</span><b>${fmt(last[key])}</b></div>`).join('') || '<div class="small">Vyber aspoň jeden kanál.</div>';
 }
-function renderTableHeader(){ recalcDerived(); const heads=['čas [s]',...valueKeys()]; els.table.tHead.innerHTML='<tr>'+heads.map(h=>`<th>${h}</th>`).join('')+'</tr>'; updateTable(); }
+function renderTableHeader(){ recalcDerived(); recalcCustomVars(); const heads=['čas [s]',...valueKeys()]; els.table.tHead.innerHTML='<tr>'+heads.map(h=>`<th>${h}</th>`).join('')+'</tr>'; updateTable(); }
 function updateTable(){
   const rows = state.rows.slice(-state.maxRowsInTable).reverse();
   els.table.tBodies[0].innerHTML = rows.map(r=>`<tr><td>${fmt(r.t,3)}</td>${valueKeys().map(k=>`<td>${fmt(r[k])}</td>`).join('')}</tr>`).join('');
@@ -236,7 +332,7 @@ function draw(){
   ctx.strokeStyle='#1e293b';ctx.lineWidth=1; for(let i=0;i<=8;i++){ const x=padL+i*(w-padL-padR)/8; line(x,padT,x,h-padB); const y=padT+i*(h-padT-padB)/8; line(padL,y,w-padR,y); }
   if(!state.rows.length||!state.active.length){ ctx.fillStyle='#94a3b8';ctx.font='28px system-ui';ctx.fillText('Čekám na data ze senzoru…',padL+30,h/2); return; }
   const data = state.rows.slice(-600); const tMin=data[0].t, tMax=data.at(-1).t || 1;
-  recalcDerived(); const keys=valueKeys(); let vals=[]; keys.forEach(k=>{ data.forEach(r=>{ if(Number.isFinite(r[k])) vals.push(r[k]); }); });
+  recalcDerived(); recalcCustomVars(); const keys=valueKeys(); let vals=[]; keys.forEach(k=>{ data.forEach(r=>{ if(Number.isFinite(r[k])) vals.push(r[k]); }); });
   let yMin=Math.min(...vals), yMax=Math.max(...vals); if(yMin===yMax){yMin-=1;yMax+=1;} const m=(yMax-yMin)*0.08; yMin-=m;yMax+=m;
   ctx.fillStyle='#cbd5e1';ctx.font='18px system-ui';ctx.fillText('t [s]',w/2,h-14); ctx.save();ctx.translate(18,h/2);ctx.rotate(-Math.PI/2);ctx.fillText('hodnota senzoru',0,0);ctx.restore();
   ctx.font='14px system-ui'; for(let i=0;i<=4;i++){ const t=tMin+i*(tMax-tMin)/4; const x=map(t,tMin,tMax,padL,w-padR); ctx.fillText(fmt(t,1),x-12,h-padB+24); const yv=yMin+i*(yMax-yMin)/4; const y=map(yv,yMin,yMax,h-padB,padT); ctx.fillText(fmt(yv,2),8,y+4); }
@@ -246,12 +342,12 @@ function draw(){
 function line(x1,y1,x2,y2){ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();}
 function map(v,a,b,c,d){ return b===a ? (c+d)/2 : c+(v-a)*(d-c)/(b-a); }
 function csv(){
-  recalcDerived(); const heads=['čas [s]',...valueKeys()];
+  recalcDerived(); recalcCustomVars(); const heads=['čas [s]',...valueKeys()];
   const lines=[heads.join(';')];
-  state.rows.forEach(r=> lines.push([r.t,...state.active.map(s=>r[sensorLabel(s)])].map(v=>String(v??'').replace('.',',')).join(';')));
+  state.rows.forEach(r=> lines.push([r.t,...valueKeys().map(k=>r[k])].map(v=>String(v??'').replace('.',',')).join(';')));
   const blob=new Blob([lines.join('\n')],{type:'text/csv;charset=utf-8'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='go-direct-data.csv'; a.click(); URL.revokeObjectURL(a.href);
 }
-els.connect.onclick=connect; els.start.onclick=start; els.stop.onclick=stop; els.disconnect.onclick=disconnect; els.zero.onclick=zero; els.clear.onclick=clearData; els.csv.onclick=csv; els.autoscale.onclick=draw; [els.calcVelocity,els.calcAcceleration,els.deriveWindow].forEach(el=>el && el.addEventListener('change',()=>{ recalcDerived(); renderLegend(); renderStats(); renderTableHeader(); draw(); }));
+els.connect.onclick=connect; els.start.onclick=start; els.stop.onclick=stop; els.disconnect.onclick=disconnect; els.zero.onclick=zero; els.clear.onclick=clearData; els.csv.onclick=csv; els.autoscale.onclick=draw; els.addCustom.onclick=addCustomVar; els.clearCustom.onclick=()=>{ state.customVars=[]; recalcCustomVars(); renderCustomList(); renderLegend(); renderStats(); renderTableHeader(); draw(); }; els.customB.addEventListener('change',()=>{ els.customNumberWrap.style.display = els.customB.value === '__number__' ? '' : 'none'; }); [els.calcVelocity,els.calcAcceleration,els.deriveWindow].forEach(el=>el && el.addEventListener('change',()=>{ recalcDerived(); renderCustomSelectors(); recalcCustomVars(); renderLegend(); renderStats(); renderTableHeader(); draw(); })); renderCustomSelectors(); renderCustomList();
 if('serviceWorker' in navigator){ navigator.serviceWorker.register('./sw.js').catch(()=>{}); }
 draw();
 </script>
