@@ -46,6 +46,12 @@
     </select>
     <p class="small" id="periodInfo">Po připojení se nabídka upraví podle toho, co senzor o podporované periodě hlásí.</p>
 
+    <div class="sensor" style="margin-top:10px">
+      <label><input type="checkbox" id="onlyChanged" checked> Zapisovat jen skutečně nové hodnoty senzoru</label>
+      <div class="meta">Doporučeno pro Motion/sonar. Když senzor opakuje stejnou vzdálenost, aplikace nevyrábí falešné řádky po 0,01 s nebo 0,02 s. Čas potom ukazuje skutečný příchod nových dat.</div>
+      <div class="meta" id="rateInfo">Efektivní frekvence se zobrazí při měření.</div>
+    </div>
+
     <div id="derivedControls" style="display:none">
       <label>Dopočítané veličiny</label>
       <div class="sensor">
@@ -120,9 +126,9 @@
 <script>
 'use strict';
 const $ = id => document.getElementById(id);
-const state = { device:null, sensors:[], active:[], running:false, rows:[], t0:0, lastDraw:0, maxRowsInTable:250, derivedKeys:[], customVars:[], hasMotion:false, sampleIndex:0, periodSec:0.1, maxCatchUpRows:5, supportedPeriods:[] };
+const state = { device:null, sensors:[], active:[], running:false, rows:[], t0:0, lastDraw:0, maxRowsInTable:250, derivedKeys:[], customVars:[], hasMotion:false, sampleIndex:0, periodSec:0.1, maxCatchUpRows:5, supportedPeriods:[], lastRawKey:'', lastAcceptedT:null, effectiveIntervals:[] };
 const colors = ['#38bdf8','#a7f3d0','#fbbf24','#fb7185','#c084fc','#f472b6','#93c5fd','#bef264'];
-const els = {connect:$('connect'),disconnect:$('disconnect'),start:$('start'),stop:$('stop'),zero:$('zero'),clear:$('clear'),csv:$('csv'),period:$('period'),periodInfo:$('periodInfo'),derivedControls:$('derivedControls'),calcVelocity:$('calcVelocity'),calcAcceleration:$('calcAcceleration'),deriveWindow:$('deriveWindow'),customName:$('customName'),customUnit:$('customUnit'),customA:$('customA'),customOp:$('customOp'),customB:$('customB'),customNumber:$('customNumber'),customNumberWrap:$('customNumberWrap'),addCustom:$('addCustom'),clearCustom:$('clearCustom'),customList:$('customList'),status:$('status'),sensors:$('sensors'),legend:$('legend'),stats:$('stats'),table:$('dataTable'),count:$('count'),canvas:$('chart'),subtitle:$('subtitle'),connDot:$('connDot')};
+const els = {connect:$('connect'),disconnect:$('disconnect'),start:$('start'),stop:$('stop'),zero:$('zero'),clear:$('clear'),csv:$('csv'),period:$('period'),periodInfo:$('periodInfo'),onlyChanged:$('onlyChanged'),rateInfo:$('rateInfo'),derivedControls:$('derivedControls'),calcVelocity:$('calcVelocity'),calcAcceleration:$('calcAcceleration'),deriveWindow:$('deriveWindow'),customName:$('customName'),customUnit:$('customUnit'),customA:$('customA'),customOp:$('customOp'),customB:$('customB'),customNumber:$('customNumber'),customNumberWrap:$('customNumberWrap'),addCustom:$('addCustom'),clearCustom:$('clearCustom'),customList:$('customList'),status:$('status'),sensors:$('sensors'),legend:$('legend'),stats:$('stats'),table:$('dataTable'),count:$('count'),canvas:$('chart'),subtitle:$('subtitle'),connDot:$('connDot')};
 const ctx = els.canvas.getContext('2d');
 function log(msg){ els.status.textContent = msg; }
 function setConnected(on){ els.connDot.classList.toggle('on',on); els.disconnect.disabled=!on; els.start.disabled=!on; els.zero.disabled=!on; els.clear.disabled=!on; }
@@ -336,6 +342,10 @@ async function start(){
     state.running = true;
     state.t0 = performance.now();
     state.sampleIndex = 0;
+    state.lastRawKey = '';
+    state.lastAcceptedT = null;
+    state.effectiveIntervals = [];
+    if(els.rateInfo) els.rateInfo.textContent = 'Čekám na první skutečně nové hodnoty…';
     state.periodSec = Number(els.period.value) / 1000;
     els.start.disabled=true; els.stop.disabled=false; els.csv.disabled=false;
     const period = Number(els.period.value);
@@ -352,32 +362,72 @@ async function stop(){
   log('Měření zastaveno.');
 }
 async function disconnect(){ await stop(); try{ if(state.device && typeof state.device.close === 'function') await state.device.close(); }catch(e){} state.device=null; state.sensors=[]; state.active=[]; state.hasMotion=false; state.supportedPeriods=[]; if(els.periodInfo) els.periodInfo.textContent='Po připojení se nabídka upraví podle toho, co senzor o podporované periodě hlásí.'; detectMotion(); setConnected(false); log('Odpojeno.'); renderSensorList(); renderCustomSelectors(); renderCustomList(); }
-function zero(){ state.t0 = performance.now(); state.sampleIndex = 0; state.rows=[]; renderTableHeader(); draw(); }
+function zero(){ state.t0 = performance.now(); state.sampleIndex = 0; state.lastRawKey=''; state.lastAcceptedT=null; state.effectiveIntervals=[]; if(els.rateInfo) els.rateInfo.textContent='Čekám na první skutečně nové hodnoty…'; state.rows=[]; renderTableHeader(); draw(); }
 function clearData(){ state.rows=[]; updateTable(); draw(); }
 function onValueChanged(){
   if(!state.running || !state.active.length) return;
 
-  // Důležité: Go Direct posílá událost "value-changed" pro jednotlivé kanály,
-  // ne jako dokonale hotový řádek tabulky. Kdybychom ukládali řádek při každé
-  // události, vzniknou duplicitní časy. Proto časovou osu vytváříme podle
-  // nastavené periody měření: 50 Hz → 0,00; 0,02; 0,04; 0,06…
   const elapsed = (performance.now() - state.t0) / 1000;
   const period = state.periodSec || (Number(els.period.value) / 1000) || 0.1;
+  const rawValues = state.active.map(s => {
+    const v = Number(s.value);
+    return Number.isFinite(v) ? v.toPrecision(12) : '';
+  });
+  const rawKey = rawValues.join('|');
+  const onlyChanged = !els.onlyChanged || els.onlyChanged.checked;
 
   let added = 0;
-  while((state.sampleIndex * period) <= elapsed + period * 0.25 && added < state.maxCatchUpRows){
-    const row = { t: Number((state.sampleIndex * period).toFixed(6)) };
+
+  if(onlyChanged){
+    // Pravdivější režim pro Motion/sonar: neukládáme umělé řádky, když senzor
+    // pouze znovu hlásí stejnou poslední vzdálenost. Čas je skutečný čas příchodu
+    // nové hodnoty, takže z něj jde poznat reálná obnovovací frekvence senzoru.
+    if(rawKey === state.lastRawKey) return;
+    const row = { t: Number(elapsed.toFixed(6)) };
     state.active.forEach(s => row[sensorLabel(s)] = Number(s.value));
     state.rows.push(row);
-    state.sampleIndex++;
-    added++;
+    if(state.lastAcceptedT !== null){
+      const dt = elapsed - state.lastAcceptedT;
+      if(dt > 0){
+        state.effectiveIntervals.push(dt);
+        if(state.effectiveIntervals.length > 30) state.effectiveIntervals.shift();
+      }
+    }
+    state.lastAcceptedT = elapsed;
+    state.lastRawKey = rawKey;
+    added = 1;
+  }else{
+    // Starší režim: pravidelná časová osa podle nastavené periody. Hodí se, když
+    // opravdu chceš mít řádky 0,00; 0,02; 0,04…, ale může obsahovat opakované
+    // hodnoty, pokud fyzický senzor nestíhá dodávat nové vzorky.
+    while((state.sampleIndex * period) <= elapsed + period * 0.25 && added < state.maxCatchUpRows){
+      const row = { t: Number((state.sampleIndex * period).toFixed(6)) };
+      state.active.forEach(s => row[sensorLabel(s)] = Number(s.value));
+      state.rows.push(row);
+      state.sampleIndex++;
+      added++;
+    }
   }
 
   if(!added) return;
   if(state.rows.length>10000) state.rows.splice(0, state.rows.length-10000);
+  updateEffectiveRateInfo();
   recalcDerived();
   recalcCustomVars();
   if(performance.now()-state.lastDraw>80){ state.lastDraw=performance.now(); updateUI(); }
+}
+
+function updateEffectiveRateInfo(){
+  if(!els.rateInfo) return;
+  if(!state.effectiveIntervals.length){
+    els.rateInfo.textContent = els.onlyChanged && els.onlyChanged.checked
+      ? 'Efektivní frekvence: čekám na další změnu hodnoty.'
+      : 'Používá se pravidelná časová osa podle zvolené periody.';
+    return;
+  }
+  const avg = state.effectiveIntervals.reduce((a,b)=>a+b,0) / state.effectiveIntervals.length;
+  const hz = 1 / avg;
+  els.rateInfo.textContent = `Efektivní frekvence nových hodnot: přibližně ${fmt(hz,1)} Hz, průměrný krok ${fmt(avg,3)} s.`;
 }
 function loop(){ if(state.running){ updateUI(); requestAnimationFrame(loop); } }
 function updateUI(){ renderStats(); updateTable(); draw(); els.count.textContent = `${state.rows.length} řádků`; els.subtitle.textContent = state.rows.length ? `Poslední čas: ${fmt(state.rows.at(-1).t,2)} s` : 'Čekám na data…'; }
@@ -412,6 +462,7 @@ function csv(){
   const blob=new Blob([lines.join('\n')],{type:'text/csv;charset=utf-8'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='go-direct-data.csv'; a.click(); URL.revokeObjectURL(a.href);
 }
 els.period.addEventListener('change',()=>{ state.periodSec = Number(els.period.value)/1000; });
+if(els.onlyChanged){ els.onlyChanged.onchange=()=>{ state.lastRawKey=''; state.lastAcceptedT=null; state.effectiveIntervals=[]; if(els.rateInfo) els.rateInfo.textContent = els.onlyChanged.checked ? 'Čekám na první skutečně nové hodnoty…' : 'Používá se pravidelná časová osa podle zvolené periody.'; }; }
 els.connect.onclick=connect; els.start.onclick=start; els.stop.onclick=stop; els.disconnect.onclick=disconnect; els.zero.onclick=zero; els.clear.onclick=clearData; els.csv.onclick=csv; els.autoscale.onclick=draw; els.addCustom.onclick=addCustomVar; els.clearCustom.onclick=()=>{ state.customVars=[]; recalcCustomVars(); renderCustomList(); renderLegend(); renderStats(); renderTableHeader(); draw(); }; els.customB.addEventListener('change',()=>{ els.customNumberWrap.style.display = els.customB.value === '__number__' ? '' : 'none'; }); [els.calcVelocity,els.calcAcceleration,els.deriveWindow].forEach(el=>el && el.addEventListener('change',()=>{ recalcDerived(); renderCustomSelectors(); recalcCustomVars(); renderLegend(); renderStats(); renderTableHeader(); draw(); })); renderCustomSelectors(); renderCustomList();
 if('serviceWorker' in navigator){ navigator.serviceWorker.register('./sw.js').catch(()=>{}); }
 draw();
