@@ -1,5 +1,5 @@
 // 🔥 změň při každém vydání
-const CACHE_VERSION = 'v4';
+const CACHE_VERSION = 'v5';
 
 const CACHE_NAME = 'gdx-lab-' + CACHE_VERSION;
 
