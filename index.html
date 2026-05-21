@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0f172a" />
+  <link rel="manifest" href="manifest.json" />
+  <title>Go Direct Lab – PWA</title>
+  <script src="https://unpkg.com/@vernier/godirect/dist/godirect.min.umd.js"></script>
+  <style>
+    :root{
+      --bg:#0b1120;--panel:#111827;--panel2:#172033;--text:#e5e7eb;--muted:#9ca3af;--line:#334155;
+      --accent:#38bdf8;--accent2:#a7f3d0;--danger:#fb7185;--warn:#fbbf24;--ok:#34d399;
+    }
+    *{box-sizing:border-box} body{margin:0;background:linear-gradient(135deg,#07111f,#111827 55%,#0f172a);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
+    header{padding:18px 18px 10px;max-width:1180px;margin:auto} h1{font-size:clamp(24px,4vw,42px);margin:0 0 6px}.sub{color:var(--muted);line-height:1.45}
+    main{max-width:1180px;margin:auto;padding:12px 18px 28px;display:grid;gap:14px;grid-template-columns:360px 1fr}.card{background:rgba(17,24,39,.88);border:1px solid rgba(148,163,184,.18);box-shadow:0 20px 60px rgba(0,0,0,.25);border-radius:22px;padding:16px}.wide{grid-column:1/-1}
+    .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}button,input,select{font:inherit}button{border:0;border-radius:14px;padding:10px 13px;background:#263247;color:var(--text);cursor:pointer}button.primary{background:linear-gradient(135deg,#0ea5e9,#22c55e);color:#00111a;font-weight:800}button.danger{background:#3b1f2a;color:#fecdd3}button:disabled{opacity:.45;cursor:not-allowed}label{display:block;font-weight:700;margin:12px 0 5px}input,select{width:100%;border-radius:13px;border:1px solid var(--line);background:#0f172a;color:var(--text);padding:10px}.small{font-size:13px;color:var(--muted)}
+    #status{padding:10px 12px;border-radius:14px;background:#0f172a;border:1px solid var(--line);color:var(--muted);margin-top:10px;white-space:pre-wrap}.pill{display:inline-flex;gap:7px;align-items:center;border:1px solid var(--line);background:#0f172a;border-radius:999px;padding:7px 10px;margin:4px 4px 0 0}.dot{width:9px;height:9px;border-radius:50%;background:var(--danger)}.dot.on{background:var(--ok)}
+    .sensor-list{display:grid;gap:8px;margin-top:8px}.sensor{border:1px solid var(--line);border-radius:14px;padding:10px;background:#0f172a}.sensor label{display:flex;gap:8px;align-items:flex-start;margin:0;font-weight:600}.sensor input{width:auto;margin-top:3px}.sensor .meta{font-size:12px;color:var(--muted);margin-left:24px}
+    canvas{width:100%;height:430px;background:#020617;border:1px solid #1e293b;border-radius:20px;display:block}.toolbar{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:10px;flex-wrap:wrap}.legend{display:flex;gap:8px;flex-wrap:wrap}.legend span{font-size:13px;color:#d1d5db;background:#0f172a;border:1px solid var(--line);padding:6px 8px;border-radius:999px}.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:12px}.stat{background:#0f172a;border:1px solid var(--line);border-radius:16px;padding:10px}.stat b{display:block;font-size:20px;margin-top:4px;overflow:hidden;text-overflow:ellipsis}.table-wrap{max-height:270px;overflow:auto;border-radius:16px;border:1px solid var(--line)}table{width:100%;border-collapse:collapse;font-size:13px}th,td{border-bottom:1px solid #1f2937;padding:8px;text-align:right;white-space:nowrap}th:first-child,td:first-child{text-align:left}th{position:sticky;top:0;background:#111827;color:#cbd5e1}.hint{border-left:4px solid var(--accent);padding:10px 12px;background:#0f172a;border-radius:12px;color:#cbd5e1;line-height:1.45}
+    @media(max-width:900px){main{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,1fr)}canvas{height:360px}}
+  </style>
+</head>
+<body>
+<header>
+  <h1>Go Direct Lab</h1>
+  <div class="sub">Jednoduchá PWA pro Vernier Go Direct senzory přes Bluetooth: živý graf, kanály, vzorkování, tabulka a CSV export.</div>
+</header>
+<main>
+  <section class="card">
+    <div class="row">
+      <button id="connect" class="primary">Připojit Go Direct</button>
+      <button id="disconnect" class="danger" disabled>Odpojit</button>
+    </div>
+    <div id="status"><span class="pill"><span class="dot" id="connDot"></span> nepřipojeno</span></div>
+
+    <label for="period">Perioda měření</label>
+    <select id="period">
+      <option value="20">20 ms (50 Hz)</option>
+      <option value="50">50 ms (20 Hz)</option>
+      <option value="100" selected>100 ms (10 Hz)</option>
+      <option value="200">200 ms (5 Hz)</option>
+      <option value="500">500 ms (2 Hz)</option>
+      <option value="1000">1 s</option>
+    </select>
+    <p class="small">Některé senzory nemusí všechny rychlosti podporovat. Když to nepůjde, zkus pomalejší periodu.</p>
+
+    <div class="row" style="margin-top:10px">
+      <button id="start" disabled>Start</button>
+      <button id="stop" disabled>Stop</button>
+      <button id="zero" disabled>Vynulovat čas</button>
+      <button id="clear" disabled>Smazat data</button>
+    </div>
+
+    <label>Kanály senzoru</label>
+    <div id="sensors" class="sensor-list small">Nejdřív připoj senzor.</div>
+  </section>
+
+  <section class="card">
+    <div class="toolbar">
+      <div>
+        <b id="title">Živý graf</b><br><span class="small" id="subtitle">Čekám na data…</span>
+      </div>
+      <div class="row">
+        <button id="autoscale">Auto měřítko</button>
+        <button id="csv" disabled>Stáhnout CSV</button>
+      </div>
+    </div>
+    <div class="legend" id="legend"></div>
+    <canvas id="chart" width="1200" height="600"></canvas>
+    <div class="stats" id="stats"></div>
+  </section>
+
+  <section class="card wide">
+    <div class="toolbar"><b>Naměřená data</b><span class="small" id="count">0 řádků</span></div>
+    <div class="table-wrap"><table id="dataTable"><thead></thead><tbody></tbody></table></div>
+  </section>
+
+  <section class="card wide">
+    <div class="hint"><b>Poznámka:</b> Funguje to jen v prohlížeči s Web Bluetooth a přes HTTPS. Na mobilu nejčastěji Chrome na Androidu. iPhone/Safari Web Bluetooth běžně neumí. Knihovna Vernieru nepodporuje Go Direct spektrometry.</div>
+  </section>
+</main>
+<script>
+'use strict';
+const $ = id => document.getElementById(id);
+const state = { device:null, sensors:[], active:[], running:false, rows:[], t0:0, lastDraw:0, maxRowsInTable:250 };
+const colors = ['#38bdf8','#a7f3d0','#fbbf24','#fb7185','#c084fc','#f472b6','#93c5fd','#bef264'];
+const els = {connect:$('connect'),disconnect:$('disconnect'),start:$('start'),stop:$('stop'),zero:$('zero'),clear:$('clear'),csv:$('csv'),period:$('period'),status:$('status'),sensors:$('sensors'),legend:$('legend'),stats:$('stats'),table:$('dataTable'),count:$('count'),canvas:$('chart'),subtitle:$('subtitle'),connDot:$('connDot')};
+const ctx = els.canvas.getContext('2d');
+function log(msg){ els.status.textContent = msg; }
+function setConnected(on){ els.connDot.classList.toggle('on',on); els.disconnect.disabled=!on; els.start.disabled=!on; els.zero.disabled=!on; els.clear.disabled=!on; }
+function fmt(x,d=3){ if(x===null||x===undefined||Number.isNaN(Number(x))) return ''; return Number(x).toLocaleString('cs-CZ',{maximumFractionDigits:d}); }
+function sensorLabel(s){ return `${s.name || 'kanál'}${s.unit ? ' ['+s.unit+']':''}`; }
+async function connect(){
+  try{
+    if(!window.godirect){ throw new Error('Nenačetla se knihovna godirect-js. Zkontroluj internet nebo ulož knihovnu lokálně.'); }
+    log('Otevírám výběr Bluetooth zařízení…');
+    const period = Number(els.period.value);
+    let device;
+    try { device = await godirect.selectDevice({measurementPeriod: period}); }
+    catch(e){ device = await godirect.selectDevice(); }
+    state.device = device;
+    state.sensors = (device.sensors || []).slice();
+    state.active = state.sensors.filter(s => s.enabled).slice(0,2);
+    if(!state.active.length && state.sensors.length){ state.active = [state.sensors[0]]; state.sensors[0].enabled = true; }
+    state.sensors.forEach((s,idx)=>{ s._idx=idx; s.on('value-changed', onValueChanged); });
+    renderSensorList(); renderLegend(); renderStats(); renderTableHeader(); setConnected(true);
+    log(`Připojeno: ${device.name || 'Go Direct'}\nKanálů: ${state.sensors.length}\nVyber kanály a stiskni Start.`);
+  }catch(err){ log('Nepodařilo se připojit: ' + (err.message || err)); }
+}
+function renderSensorList(){
+  if(!state.sensors.length){ els.sensors.textContent='Senzor nemá načtené kanály.'; return; }
+  els.sensors.innerHTML = state.sensors.map((s,i)=>`<div class="sensor"><label><input type="checkbox" data-i="${i}" ${state.active.includes(s)?'checked':''}> <span>${s.name || 'Kanál '+i}</span></label><div class="meta">jednotka: ${s.unit || '—'} · číslo: ${s.number ?? i}</div></div>`).join('');
+  els.sensors.querySelectorAll('input').forEach(cb=>cb.addEventListener('change',()=>{
+    state.active = Array.from(els.sensors.querySelectorAll('input:checked')).map(x=>state.sensors[Number(x.dataset.i)]);
+    renderLegend(); renderStats(); renderTableHeader(); draw();
+  }));
+}
+async function start(){
+  if(!state.device) return;
+  try{
+    state.running = true; state.t0 = performance.now(); els.start.disabled=true; els.stop.disabled=false; els.csv.disabled=false;
+    const period = Number(els.period.value);
+    for(const s of state.sensors) s.enabled = state.active.includes(s);
+    if(typeof state.device.setMeasurementPeriod === 'function') await state.device.setMeasurementPeriod(period);
+    if(typeof state.device.start === 'function') await state.device.start(period);
+    log('Měření běží. Aktivní kanály: ' + state.active.map(sensorLabel).join(', '));
+    requestAnimationFrame(loop);
+  }catch(err){ state.running=false; log('Start selhal: '+(err.message||err)); }
+}
+async function stop(){
+  state.running = false; els.start.disabled=false; els.stop.disabled=true;
+  try{ if(state.device && typeof state.device.stop === 'function') await state.device.stop(); }catch(e){}
+  log('Měření zastaveno.');
+}
+async function disconnect(){ await stop(); try{ if(state.device && typeof state.device.close === 'function') await state.device.close(); }catch(e){} state.device=null; state.sensors=[]; state.active=[]; setConnected(false); log('Odpojeno.'); renderSensorList(); }
+function zero(){ state.t0 = performance.now(); state.rows=[]; renderTableHeader(); draw(); }
+function clearData(){ state.rows=[]; updateTable(); draw(); }
+function onValueChanged(){
+  if(!state.running || !state.active.length) return;
+  const t = (performance.now() - state.t0)/1000;
+  const row = {t}; state.active.forEach(s=> row[sensorLabel(s)] = Number(s.value));
+  state.rows.push(row); if(state.rows.length>10000) state.rows.shift();
+  if(performance.now()-state.lastDraw>80){ state.lastDraw=performance.now(); updateUI(); }
+}
+function loop(){ if(state.running){ updateUI(); requestAnimationFrame(loop); } }
+function updateUI(){ renderStats(); updateTable(); draw(); els.count.textContent = `${state.rows.length} řádků`; els.subtitle.textContent = state.rows.length ? `Poslední čas: ${fmt(state.rows.at(-1).t,2)} s` : 'Čekám na data…'; }
+function renderLegend(){ els.legend.innerHTML = state.active.map((s,i)=>`<span style="border-color:${colors[i%colors.length]}">${sensorLabel(s)}</span>`).join(''); }
+function renderStats(){
+  const last = state.rows.at(-1)||{};
+  els.stats.innerHTML = state.active.map((s,i)=>{ const key=sensorLabel(s); return `<div class="stat"><span class="small">${key}</span><b>${fmt(last[key])}</b></div>`; }).join('') || '<div class="small">Vyber aspoň jeden kanál.</div>';
+}
+function renderTableHeader(){ const heads=['čas [s]',...state.active.map(sensorLabel)]; els.table.tHead.innerHTML='<tr>'+heads.map(h=>`<th>${h}</th>`).join('')+'</tr>'; updateTable(); }
+function updateTable(){
+  const rows = state.rows.slice(-state.maxRowsInTable).reverse();
+  els.table.tBodies[0].innerHTML = rows.map(r=>`<tr><td>${fmt(r.t,3)}</td>${state.active.map(s=>`<td>${fmt(r[sensorLabel(s)])}</td>`).join('')}</tr>`).join('');
+}
+function draw(){
+  const w=els.canvas.width,h=els.canvas.height,padL=70,padR=20,padT=28,padB=55; ctx.clearRect(0,0,w,h); ctx.fillStyle='#020617';ctx.fillRect(0,0,w,h);
+  ctx.strokeStyle='#1e293b';ctx.lineWidth=1; for(let i=0;i<=8;i++){ const x=padL+i*(w-padL-padR)/8; line(x,padT,x,h-padB); const y=padT+i*(h-padT-padB)/8; line(padL,y,w-padR,y); }
+  if(!state.rows.length||!state.active.length){ ctx.fillStyle='#94a3b8';ctx.font='28px system-ui';ctx.fillText('Čekám na data ze senzoru…',padL+30,h/2); return; }
+  const data = state.rows.slice(-600); const tMin=data[0].t, tMax=data.at(-1).t || 1;
+  let vals=[]; state.active.forEach(s=>{ const k=sensorLabel(s); data.forEach(r=>{ if(Number.isFinite(r[k])) vals.push(r[k]); }); });
+  let yMin=Math.min(...vals), yMax=Math.max(...vals); if(yMin===yMax){yMin-=1;yMax+=1;} const m=(yMax-yMin)*0.08; yMin-=m;yMax+=m;
+  ctx.fillStyle='#cbd5e1';ctx.font='18px system-ui';ctx.fillText('t [s]',w/2,h-14); ctx.save();ctx.translate(18,h/2);ctx.rotate(-Math.PI/2);ctx.fillText('hodnota senzoru',0,0);ctx.restore();
+  ctx.font='14px system-ui'; for(let i=0;i<=4;i++){ const t=tMin+i*(tMax-tMin)/4; const x=map(t,tMin,tMax,padL,w-padR); ctx.fillText(fmt(t,1),x-12,h-padB+24); const yv=yMin+i*(yMax-yMin)/4; const y=map(yv,yMin,yMax,h-padB,padT); ctx.fillText(fmt(yv,2),8,y+4); }
+  state.active.forEach((s,i)=>{ const k=sensorLabel(s); ctx.strokeStyle=colors[i%colors.length];ctx.lineWidth=3;ctx.beginPath(); let started=false; data.forEach(r=>{ const v=r[k]; if(!Number.isFinite(v)) return; const x=map(r.t,tMin,tMax,padL,w-padR); const y=map(v,yMin,yMax,h-padB,padT); if(!started){ctx.moveTo(x,y);started=true;} else ctx.lineTo(x,y); }); ctx.stroke(); });
+  ctx.strokeStyle='#64748b';ctx.lineWidth=2;ctx.strokeRect(padL,padT,w-padL-padR,h-padT-padB);
+}
+function line(x1,y1,x2,y2){ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();}
+function map(v,a,b,c,d){ return b===a ? (c+d)/2 : c+(v-a)*(d-c)/(b-a); }
+function csv(){
+  const heads=['čas [s]',...state.active.map(sensorLabel)];
+  const lines=[heads.join(';')];
+  state.rows.forEach(r=> lines.push([r.t,...state.active.map(s=>r[sensorLabel(s)])].map(v=>String(v??'').replace('.',',')).join(';')));
+  const blob=new Blob([lines.join('\n')],{type:'text/csv;charset=utf-8'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='go-direct-data.csv'; a.click(); URL.revokeObjectURL(a.href);
+}
+els.connect.onclick=connect; els.start.onclick=start; els.stop.onclick=stop; els.disconnect.onclick=disconnect; els.zero.onclick=zero; els.clear.onclick=clearData; els.csv.onclick=csv; els.autoscale.onclick=draw;
+if('serviceWorker' in navigator){ navigator.serviceWorker.register('./sw.js').catch(()=>{}); }
+draw();
+</script>
+</body>
+</html>
