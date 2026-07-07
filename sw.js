@@ -1,7 +1,8 @@
 // 🔥 změň při každém vydání
 const CACHE_VERSION = 'v6';
 
-const CACHE_NAME = 'gdx-lab-' + CACHE_VERSION;
+const CACHE_PREFIX = 'gdx-lab-';
+const CACHE_NAME = CACHE_PREFIX + CACHE_VERSION;
 
 const ASSETS = [
   './',
@@ -31,7 +32,7 @@ self.addEventListener('activate', event => {
     caches.keys().then(keys => {
       return Promise.all(
         keys.map(key => {
-          if (key !== CACHE_NAME) {
+          if (key.startsWith(CACHE_PREFIX) && key !== CACHE_NAME) {
             console.log('Deleting old cache:', key);
             return caches.delete(key);
           }
