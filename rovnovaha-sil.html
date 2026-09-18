@@ -27,10 +27,10 @@ button:disabled{opacity:.42;cursor:not-allowed}
 .primary{background:#111827;color:#fff;border-color:#111827}
 .primary:hover{background:#1f2937}
 
-.meters{display:grid;grid-template-columns:1fr;gap:10px}
+.meters{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
 .meter{
   --meter-color:#2563eb;
-  height:205px;
+  height:245px;
   background:var(--card);
   border:1px solid var(--line);
   border-top:7px solid var(--meter-color);
@@ -46,8 +46,8 @@ button:disabled{opacity:.42;cursor:not-allowed}
 .status.ok{color:#15803d}
 .status.err{color:#b42318}
 .reading{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;gap:.16em;padding:2px 10px 7px;white-space:nowrap}
-.value{font-size:clamp(4rem,6vw,6.7rem);line-height:.86;font-weight:780;letter-spacing:-.055em;font-variant-numeric:tabular-nums lining-nums}
-.unit{font-size:clamp(1.8rem,2.5vw,3rem);font-weight:750;color:#475467;margin-left:.08em}
+.value{font-size:clamp(3.6rem,5.2vw,5.8rem);line-height:.86;font-weight:780;letter-spacing:-.055em;font-variant-numeric:tabular-nums lining-nums}
+.unit{font-size:clamp(1.5rem,2vw,2.4rem);font-weight:750;color:#475467;margin-left:.08em}
 .controls{border-top:1px solid var(--line);padding:6px 8px;display:flex;gap:7px;align-items:center}
 .controls button{flex:1;padding:7px 10px}
 .device{display:none}
@@ -55,6 +55,12 @@ button:disabled{opacity:.42;cursor:not-allowed}
 .add-wrap{display:flex;justify-content:center;padding:14px 0 0}
 .add-meter{min-width:220px;border-style:dashed;font-size:1rem;padding:10px 18px}
 .add-meter .plus{font-size:1.35rem;line-height:0;vertical-align:-1px;margin-right:5px}
+
+
+@media(max-width:1050px) and (min-width:761px){
+  .meters{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .meter{height:225px}
+}
 
 @media(max-width:760px){
   .app{width:calc(100% - 12px);padding:7px 0 16px}
@@ -64,7 +70,7 @@ button:disabled{opacity:.42;cursor:not-allowed}
   #support{display:none}
   .global{grid-column:2;grid-row:1;gap:4px}
   .global button{padding:5px 7px;font-size:.72rem}
-  .meters{gap:6px}
+  .meters{grid-template-columns:1fr;gap:6px}
   .meter{height:180px;border-radius:12px;border-top-width:5px}
   .head{padding:5px 8px 1px}
   .name{font-size:.9rem}
