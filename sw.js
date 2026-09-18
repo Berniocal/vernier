@@ -1,83 +1,51 @@
-// 🔥 změň při každém vydání
-const CACHE_VERSION = 'v6';
-
+// Vernier app cache
+const CACHE_VERSION = 'v7';
 const CACHE_PREFIX = 'gdx-lab-';
 const CACHE_NAME = CACHE_PREFIX + CACHE_VERSION;
 
 const ASSETS = [
   './',
   './index.html',
+  './go-direct-lab.html',
+  './rovnovaha-sil.html',
   './manifest.json',
   './icon.svg'
 ];
 
-// INSTALL
 self.addEventListener('install', event => {
-  console.log('SW install', CACHE_VERSION);
-
   self.skipWaiting();
-
-  event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => {
-      return cache.addAll(ASSETS);
-    })
-  );
+  event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(ASSETS)));
 });
 
-// ACTIVATE
 self.addEventListener('activate', event => {
-  console.log('SW activate', CACHE_VERSION);
-
   event.waitUntil(
-    caches.keys().then(keys => {
-      return Promise.all(
-        keys.map(key => {
-          if (key.startsWith(CACHE_PREFIX) && key !== CACHE_NAME) {
-            console.log('Deleting old cache:', key);
-            return caches.delete(key);
-          }
-        })
-      );
-    }).then(() => self.clients.claim())
+    caches.keys()
+      .then(keys => Promise.all(keys.map(key => {
+        if (key.startsWith(CACHE_PREFIX) && key !== CACHE_NAME) return caches.delete(key);
+      })))
+      .then(() => self.clients.claim())
   );
 });
 
-// FETCH
 self.addEventListener('fetch', event => {
-  // HTML vždy zkus nejdřív ze sítě
   if (event.request.mode === 'navigate') {
     event.respondWith(
       fetch(event.request)
         .then(response => {
           const copy = response.clone();
-
-          caches.open(CACHE_NAME).then(cache => {
-            cache.put(event.request, copy);
-          });
-
+          caches.open(CACHE_NAME).then(cache => cache.put(event.request, copy));
           return response;
         })
-        .catch(() => caches.match('./index.html'))
+        .catch(() => caches.match(event.request).then(cached => cached || caches.match('./index.html')))
     );
-
     return;
   }
 
-  // ostatní soubory cache-first
   event.respondWith(
-    caches.match(event.request).then(cached => {
-      return (
-        cached ||
-        fetch(event.request).then(response => {
-          const copy = response.clone();
-
-          caches.open(CACHE_NAME).then(cache => {
-            cache.put(event.request, copy);
-          });
-
-          return response;
-        })
-      );
-    })
+    caches.match(event.request).then(cached => cached || fetch(event.request).then(response => {
+      const copy = response.clone();
+      caches.open(CACHE_NAME).then(cache => cache.put(event.request, copy));
+      return response;
+    }))
   );
 });
