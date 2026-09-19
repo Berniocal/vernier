@@ -1,0 +1,402 @@
+<!doctype html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Hydrostatický tlak – Vernier</title>
+<script src="https://unpkg.com/@vernier/godirect/dist/godirect.min.umd.js"></script>
+<style>
+:root{
+  --bg:#f4f5f7;--card:#fff;--text:#111827;--muted:#667085;--line:#d9dee7;
+  --accent:#2563eb;--accent-soft:#eff6ff;--danger:#b42318;
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--text)}
+button,input{font:inherit}
+.app{width:min(960px,calc(100% - 28px));margin:0 auto;padding:20px 0 36px}
+header{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:14px;margin-bottom:18px}
+h1{margin:0;font-size:clamp(1.3rem,2.3vw,2rem);font-weight:800;letter-spacing:-.02em}
+.connection{display:flex;align-items:center;justify-content:center;gap:9px;color:var(--muted);font-size:.9rem}
+.transport-switch,.unit-switch{display:inline-flex;align-items:center;gap:4px;padding:4px;background:#e8edf3;border:1px solid #d6dde7;border-radius:13px;box-shadow:inset 0 1px 2px rgba(15,23,42,.05)}
+.transport-option,.unit-option{position:relative;display:flex;align-items:center;gap:7px;justify-content:center;padding:8px 13px;border-radius:9px;cursor:pointer;color:#475467;font-weight:750;line-height:1;transition:.15s ease;user-select:none}
+.transport-option{min-width:112px}
+.unit-option{min-width:66px}
+.transport-option:hover,.unit-option:hover{background:rgba(255,255,255,.65);color:#111827}
+.transport-option input,.unit-option input{position:absolute;opacity:0;pointer-events:none}
+.transport-option:has(input:checked),.unit-option:has(input:checked){background:#fff;color:#111827;box-shadow:0 1px 2px rgba(15,23,42,.12),0 3px 9px rgba(15,23,42,.08)}
+.transport-option svg{width:18px;height:18px;stroke:currentColor}
+.transport-option.unsupported{opacity:.38;cursor:not-allowed}
+.actions{display:flex;justify-content:flex-end;gap:8px}
+button{border:1px solid var(--line);background:#fff;border-radius:10px;padding:9px 14px;cursor:pointer;font-weight:700;color:var(--text)}
+button:hover{background:#f8fafc}
+button:disabled{opacity:.4;cursor:not-allowed}
+.primary{background:#111827;color:#fff;border-color:#111827}
+.primary:hover{background:#1f2937}
+.zero{background:#2563eb;color:#fff;border-color:#2563eb}
+.zero:hover{background:#1d4ed8}
+.card{background:var(--card);border:1px solid var(--line);border-radius:22px;box-shadow:0 10px 35px rgba(15,23,42,.06);overflow:hidden}
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 18px;border-bottom:1px solid var(--line)}
+.status{color:var(--muted);font-size:.88rem}
+.status.ok{color:#15803d}.status.err{color:var(--danger)}
+.mode{font-weight:750}
+.display{min-height:330px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:30px 18px 24px;text-align:center}
+.label{font-size:1rem;color:var(--muted);margin-bottom:8px}
+.reading{display:flex;align-items:baseline;justify-content:center;gap:.18em;white-space:nowrap}
+.value{font-size:clamp(5.2rem,15vw,10rem);font-weight:800;line-height:.85;letter-spacing:-.065em;font-variant-numeric:tabular-nums lining-nums}
+.unit{font-size:clamp(2rem,5vw,4rem);font-weight:750;color:#475467}
+.zero-info{height:24px;margin-top:18px;color:#2563eb;font-weight:650;font-size:.9rem}
+.controls{display:grid;grid-template-columns:1fr auto auto;gap:10px;padding:14px 18px;border-top:1px solid var(--line);align-items:center}
+.units{display:flex;align-items:center;gap:9px}
+.units>span{font-size:.85rem;color:var(--muted)}
+.device{font-size:.78rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:7px;padding:0 2px}
+.help{margin-top:12px;color:var(--muted);font-size:.86rem;line-height:1.45;text-align:center}
+@media(max-width:720px){
+  .app{width:calc(100% - 12px);padding:8px 0 18px}
+  header{grid-template-columns:1fr auto;gap:7px;margin-bottom:8px}
+  h1{font-size:1.08rem}
+  .connection{grid-column:1/-1;grid-row:2;justify-content:flex-start;font-size:.78rem}
+  .connection>span:first-child{display:none}
+  .transport-switch{padding:3px;gap:3px}
+  .transport-option{min-width:100px;padding:7px 10px;font-size:.76rem}
+  #support{display:none}
+  .actions button{padding:6px 8px;font-size:.74rem}
+  .display{min-height:280px;padding:22px 10px 18px}
+  .value{font-size:clamp(4rem,23vw,7rem)}
+  .unit{font-size:clamp(1.7rem,9vw,2.8rem)}
+  .controls{grid-template-columns:1fr 1fr;gap:7px;padding:10px}
+  .units{grid-column:1/-1;justify-content:center;order:3}
+  .controls button{padding:8px 8px}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>Hydrostatický tlak</h1>
+
+    <div class="connection">
+      <span>Připojení:</span>
+      <div class="transport-switch" role="radiogroup" aria-label="Typ připojení">
+        <label id="ble_label" class="transport-option" for="ble">
+          <input type="radio" id="ble" name="type" value="1" checked>
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M12 3v18l6-5-6-4 6-4-6-5Z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="m6 7 12 9M6 17 18 8" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+          <span>Bluetooth</span>
+        </label>
+        <label id="usb_label" class="transport-option" for="usb">
+          <input type="radio" id="usb" name="type" value="0">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M12 3v12M12 3 9.5 5.5M12 3l2.5 2.5M12 10h5v-2.5M17 7.5h2v2h-2v-2ZM12 13H7v-2.5M7 10.5 4.5 13 7 15.5M12 15v2.5a3.5 3.5 0 0 1-3.5 3.5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="8.5" cy="21" r="1.5" stroke-width="2"/>
+          </svg>
+          <span>USB</span>
+        </label>
+      </div>
+      <span id="support"></span>
+    </div>
+
+    <div class="actions">
+      <button id="connect" class="primary">Připojit</button>
+      <button id="disconnect" disabled>Odpojit</button>
+    </div>
+  </header>
+
+  <section class="card">
+    <div class="topbar">
+      <div class="mode" id="modeLabel">Tlak</div>
+      <div class="status" id="status">nepřipojen</div>
+    </div>
+
+    <div class="display">
+      <div class="label" id="readingLabel">Aktuální tlak</div>
+      <div class="reading">
+        <span class="value" id="value">—</span>
+        <span class="unit" id="unit">kPa</span>
+      </div>
+      <div class="zero-info" id="zeroInfo"></div>
+      <div class="device" id="device"></div>
+    </div>
+
+    <div class="controls">
+      <div class="units">
+        <span>Jednotka:</span>
+        <div class="unit-switch" role="radiogroup" aria-label="Jednotka tlaku">
+          <label class="unit-option"><input type="radio" name="unit" value="Pa"><span>Pa</span></label>
+          <label class="unit-option"><input type="radio" name="unit" value="hPa"><span>hPa</span></label>
+          <label class="unit-option"><input type="radio" name="unit" value="kPa" checked><span>kPa</span></label>
+        </div>
+      </div>
+
+      <button id="zero" class="zero" disabled>Vynulovat</button>
+      <button id="clearZero" disabled>Zrušit nulu</button>
+    </div>
+  </section>
+
+  <div class="help">Po vynulování se aktuální tlak bere jako 0 a displej ukazuje pouze změnu tlaku vůči této hodnotě.</div>
+</div>
+
+<script>
+(()=>{
+'use strict';
+
+const state={
+  device:null,
+  sensor:null,
+  rawPa:NaN,
+  zeroPa:0,
+  zeroActive:false,
+  sensorUnit:'',
+  factorToPa:null
+};
+
+const els={
+  connect:document.querySelector('#connect'),
+  disconnect:document.querySelector('#disconnect'),
+  zero:document.querySelector('#zero'),
+  clearZero:document.querySelector('#clearZero'),
+  value:document.querySelector('#value'),
+  unit:document.querySelector('#unit'),
+  status:document.querySelector('#status'),
+  modeLabel:document.querySelector('#modeLabel'),
+  readingLabel:document.querySelector('#readingLabel'),
+  zeroInfo:document.querySelector('#zeroInfo'),
+  device:document.querySelector('#device')
+};
+
+function setStatus(text,type=''){
+  els.status.textContent=text;
+  els.status.className='status'+(type?' '+type:'');
+}
+
+function pressureFactorToPa(unit){
+  const u=String(unit||'').trim().toLowerCase().replace(/\s+/g,'');
+  if(u==='pa')return 1;
+  if(u==='hpa')return 100;
+  if(u==='kpa')return 1000;
+  if(u==='mpa')return 1000000;
+  if(u==='bar')return 100000;
+  if(u==='mbar')return 100;
+  if(u==='psi')return 6894.757293168;
+  return null;
+}
+
+function findPressureSensor(device){
+  const sensors=device?.sensors||[];
+  const pressureName=/pressure|tlak/i;
+  const pressureUnit=/^(pa|hpa|kpa|mpa|bar|mbar|psi)$/i;
+  return sensors.find(s=>s.enabled && pressureName.test(String(s.name||'')))
+    || sensors.find(s=>s.enabled && pressureUnit.test(String(s.unit||'').trim()))
+    || sensors.find(s=>pressureName.test(String(s.name||'')))
+    || sensors.find(s=>pressureUnit.test(String(s.unit||'').trim()))
+    || sensors[0]
+    || null;
+}
+
+function selectedUnit(){
+  return document.querySelector('input[name="unit"]:checked')?.value||'kPa';
+}
+
+function fromPa(pa,unit){
+  if(unit==='Pa')return pa;
+  if(unit==='hPa')return pa/100;
+  return pa/1000;
+}
+
+function formatValue(v,unit){
+  if(!Number.isFinite(v))return '—';
+  const a=Math.abs(v);
+  let digits=2;
+  if(unit==='Pa')digits=0;
+  else if(a>=100)digits=1;
+  else if(a<1)digits=3;
+  return v.toLocaleString('cs-CZ',{minimumFractionDigits:digits,maximumFractionDigits:digits});
+}
+
+function render(){
+  if(!Number.isFinite(state.rawPa)){
+    els.value.textContent='—';
+    els.unit.textContent=selectedUnit();
+    return;
+  }
+
+  const unit=selectedUnit();
+  const pa=state.zeroActive ? state.rawPa-state.zeroPa : state.rawPa;
+  const shown=fromPa(pa,unit);
+
+  els.value.textContent=formatValue(shown,unit);
+  els.unit.textContent=unit;
+  els.readingLabel.textContent=state.zeroActive?'Změna tlaku od nuly':'Aktuální tlak';
+  els.modeLabel.textContent=state.zeroActive?'Relativní tlak':'Tlak';
+
+  if(state.zeroActive){
+    const z=fromPa(state.zeroPa,unit);
+    els.zeroInfo.textContent='Nula nastavena při '+formatValue(z,unit)+' '+unit;
+  }else{
+    els.zeroInfo.textContent='';
+  }
+}
+
+async function connect(){
+  if(state.device)return;
+
+  els.connect.disabled=true;
+  setStatus('připojuji…');
+
+  try{
+    if(!window.godirect)throw new Error('Nepodařilo se načíst knihovnu Vernier Go Direct.');
+
+    const bluetooth=document.querySelector('input[name="type"]:checked').value==="1";
+
+    if(bluetooth&&!navigator.bluetooth)throw new Error('Web Bluetooth není v tomto prohlížeči dostupný.');
+    if(!bluetooth&&!navigator.hid)throw new Error('USB přes WebHID není v tomto prohlížeči dostupné.');
+
+    const device=await godirect.selectDevice(bluetooth);
+    if(!device)throw new DOMException('Nebylo vybráno žádné zařízení.');
+
+    state.device=device;
+
+    device.on('device-closed',()=>{
+      if(state.device===device)reset();
+    });
+
+    if(typeof device.enableDefaultSensors==='function'){
+      device.enableDefaultSensors();
+    }
+
+    const sensor=findPressureSensor(device);
+    if(!sensor)throw new Error('Nebyl nalezen kanál tlaku.');
+
+    const factor=pressureFactorToPa(sensor.unit);
+    if(factor===null){
+      throw new Error('Kanál tlaku má nepodporovanou jednotku: '+(sensor.unit||'bez jednotky'));
+    }
+
+    state.sensor=sensor;
+    state.sensorUnit=sensor.unit||'';
+    state.factorToPa=factor;
+    state.rawPa=NaN;
+    state.zeroPa=0;
+    state.zeroActive=false;
+
+    els.device.textContent=`${device.name||'Go Direct'} · ${sensor.name||'Pressure'} · zdrojová jednotka ${sensor.unit||'—'}`;
+
+    sensor.on('value-changed',s=>{
+      const raw=Number(s.value);
+      if(!Number.isFinite(raw))return;
+      state.rawPa=raw*state.factorToPa;
+      render();
+    });
+
+    setStatus('připojen','ok');
+    els.connect.textContent='Připojeno';
+    els.disconnect.disabled=false;
+    els.zero.disabled=false;
+    els.clearZero.disabled=true;
+
+  }catch(err){
+    console.error(err);
+
+    try{
+      if(state.device)await state.device.close();
+    }catch(_){}
+
+    const cancelled=
+      err?.name==='NotFoundError'
+      || /cancel|cancelled|canceled|No device selected/i.test(String(err));
+
+    reset(cancelled?'výběr zrušen':'chyba',cancelled?'':'err');
+
+    if(!cancelled){
+      alert(err?.message||String(err));
+    }
+  }finally{
+    els.connect.disabled=!!state.device;
+    if(!state.device)els.connect.textContent='Připojit';
+  }
+}
+
+function reset(status='nepřipojen',type=''){
+  state.device=null;
+  state.sensor=null;
+  state.rawPa=NaN;
+  state.zeroPa=0;
+  state.zeroActive=false;
+  state.sensorUnit='';
+  state.factorToPa=null;
+
+  els.connect.disabled=false;
+  els.connect.textContent='Připojit';
+  els.disconnect.disabled=true;
+  els.zero.disabled=true;
+  els.clearZero.disabled=true;
+  els.device.textContent='';
+  els.readingLabel.textContent='Aktuální tlak';
+  els.modeLabel.textContent='Tlak';
+  els.zeroInfo.textContent='';
+  setStatus(status,type);
+  render();
+}
+
+async function disconnect(){
+  const d=state.device;
+  if(!d){
+    reset();
+    return;
+  }
+
+  setStatus('odpojuji…');
+
+  try{d.stop?.()}catch(_){}
+  try{await d.close()}catch(_){}
+
+  if(state.device===d)reset();
+}
+
+els.connect.addEventListener('click',connect);
+els.disconnect.addEventListener('click',disconnect);
+
+els.zero.addEventListener('click',()=>{
+  if(!Number.isFinite(state.rawPa))return;
+  state.zeroPa=state.rawPa;
+  state.zeroActive=true;
+  els.clearZero.disabled=false;
+  render();
+});
+
+els.clearZero.addEventListener('click',()=>{
+  state.zeroPa=0;
+  state.zeroActive=false;
+  els.clearZero.disabled=true;
+  render();
+});
+
+document.querySelectorAll('input[name="unit"]').forEach(r=>r.addEventListener('change',render));
+
+const ble=document.querySelector('#ble');
+const usb=document.querySelector('#usb');
+const bleLabel=document.querySelector('#ble_label');
+const usbLabel=document.querySelector('#usb_label');
+
+if(!navigator.bluetooth){
+  ble.disabled=true;
+  bleLabel.classList.add('unsupported');
+  if(navigator.hid)usb.checked=true;
+}
+if(!navigator.hid){
+  usb.disabled=true;
+  usbLabel.classList.add('unsupported');
+  if(navigator.bluetooth)ble.checked=true;
+}
+
+document.querySelector('#support').textContent=
+  (!navigator.bluetooth||!navigator.hid)
+    ? `${navigator.bluetooth?'':'Bluetooth není podporováno'}${(!navigator.bluetooth&&!navigator.hid)?' · ':''}${navigator.hid?'':'USB není podporováno'}`
+    : '';
+
+render();
+})();
+</script>
+</body>
+</html>
