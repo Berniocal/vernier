@@ -1,0 +1,563 @@
+<!doctype html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Osciloskop – Vernier</title>
+<script src="https://unpkg.com/@vernier/godirect/dist/godirect.min.umd.js"></script>
+<style>
+:root{
+  --bg:#f4f5f7;--card:#fff;--text:#111827;--muted:#667085;--line:#d9dee7;
+  --dark:#101828;--grid:#dbe3ee;--trace:#2563eb;--zero:#94a3b8;
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--text)}
+button,input,select{font:inherit}
+.app{width:min(1180px,calc(100% - 28px));margin:0 auto;padding:16px 0 30px}
+header{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:14px;margin-bottom:10px}
+h1{margin:0;font-size:clamp(1.25rem,2vw,1.8rem);font-weight:800}
+.connection{display:flex;align-items:center;justify-content:center;gap:9px;color:var(--muted);font-size:.9rem}
+.transport-switch{display:inline-flex;align-items:center;gap:4px;padding:4px;background:#e8edf3;border:1px solid #d6dde7;border-radius:13px;box-shadow:inset 0 1px 2px rgba(15,23,42,.05)}
+.transport-option{position:relative;display:flex;align-items:center;gap:7px;min-width:112px;justify-content:center;padding:8px 13px;border-radius:9px;cursor:pointer;color:#475467;font-weight:750;line-height:1;transition:.15s ease;user-select:none}
+.transport-option:hover{background:rgba(255,255,255,.65);color:#111827}
+.transport-option input{position:absolute;opacity:0;pointer-events:none}
+.transport-option:has(input:checked){background:#fff;color:#111827;box-shadow:0 1px 2px rgba(15,23,42,.12),0 3px 9px rgba(15,23,42,.08)}
+.transport-option svg{width:18px;height:18px;flex:0 0 auto;stroke:currentColor}
+.transport-option.unsupported{opacity:.38;cursor:not-allowed}
+.actions{display:flex;gap:7px;justify-content:flex-end}
+button{border:1px solid var(--line);background:#fff;border-radius:10px;padding:8px 12px;cursor:pointer;font-weight:650;color:var(--text)}
+button:hover{background:#f8fafc}
+button:disabled{opacity:.42;cursor:not-allowed}
+.primary{background:var(--dark);color:#fff;border-color:var(--dark)}
+.primary:hover{background:#1f2937}
+
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 285px;gap:10px}
+.scope-card,.side-card{background:var(--card);border:1px solid var(--line);border-radius:16px;overflow:hidden;box-shadow:0 1px 2px rgba(16,24,40,.04)}
+.scope-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 12px;border-bottom:1px solid var(--line)}
+.status{font-size:.8rem;color:var(--muted)}
+.status.ok{color:#15803d}.status.err{color:#b42318}
+.scope-title{font-weight:800}
+.canvas-wrap{position:relative;width:100%;height:440px;background:#fff}
+canvas{display:block;width:100%;height:100%}
+.empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:1rem;pointer-events:none}
+.scope-controls{display:flex;gap:7px;align-items:center;flex-wrap:wrap;padding:8px;border-top:1px solid var(--line)}
+.scope-controls label{display:flex;align-items:center;gap:5px;color:var(--muted);font-size:.78rem}
+.scope-controls select{border:1px solid var(--line);border-radius:8px;background:#fff;padding:5px 7px;color:var(--text)}
+.scope-controls button{padding:6px 9px;font-size:.78rem}
+.device{margin-left:auto;max-width:250px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted);font-size:.73rem}
+
+.side-card{padding:10px;display:flex;flex-direction:column;gap:8px}
+.metric-main{border:1px solid var(--line);border-radius:13px;padding:12px;text-align:center}
+.metric-main .label{color:var(--muted);font-size:.8rem}
+.metric-main .number{font-size:clamp(2.7rem,5vw,4.4rem);font-weight:800;letter-spacing:-.05em;line-height:1.05;font-variant-numeric:tabular-nums}
+.metric-main .unit{font-size:1.35rem;font-weight:750;color:#475467;margin-left:.1em}
+.metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+.metric{border:1px solid var(--line);border-radius:11px;padding:9px;min-width:0}
+.metric .label{color:var(--muted);font-size:.72rem}
+.metric .val{font-size:1.22rem;font-weight:780;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums}
+.metric .u{font-size:.72rem;color:var(--muted);margin-left:2px}
+.side-controls{display:flex;gap:6px}
+.side-controls button{flex:1;padding:7px 5px;font-size:.78rem}
+.note{font-size:.72rem;line-height:1.4;color:var(--muted);padding:2px 3px}
+
+.safety{margin-top:10px;padding:10px 12px;border-radius:12px;background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;font-size:.8rem;line-height:1.4}
+
+@media(max-width:900px){
+  .layout{grid-template-columns:1fr}
+  .side-card{display:block}
+  .metric-main{margin-bottom:7px}
+  .metrics{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .side-controls{margin-top:7px}
+}
+@media(max-width:680px){
+  .app{width:calc(100% - 10px);padding:6px 0 18px}
+  header{grid-template-columns:1fr auto;gap:6px;margin-bottom:7px}
+  h1{font-size:1.05rem}
+  .connection{grid-column:1/-1;grid-row:2;justify-content:flex-start;font-size:.76rem}
+  .connection>span:first-child,#support{display:none}
+  .transport-switch{padding:3px;gap:3px}
+  .transport-option{min-width:99px;padding:7px 9px;font-size:.75rem}
+  .transport-option svg{width:16px;height:16px}
+  .actions{grid-column:2;grid-row:1;gap:4px}
+  .actions button{padding:5px 7px;font-size:.72rem}
+  .scope-head{padding:7px 9px}
+  .canvas-wrap{height:300px}
+  .scope-controls{gap:5px;padding:6px}
+  .scope-controls label{font-size:.7rem}
+  .scope-controls select{padding:4px 5px;font-size:.72rem}
+  .device{display:none}
+  .side-card{padding:7px}
+  .metric-main{display:flex;align-items:baseline;justify-content:center;gap:7px;padding:8px}
+  .metric-main .label{display:none}
+  .metric-main .number{font-size:2.8rem}
+  .metric-main .unit{font-size:1.25rem}
+  .metrics{grid-template-columns:repeat(2,minmax(0,1fr));gap:5px}
+  .metric{padding:7px}
+  .metric .val{font-size:1.05rem}
+  .safety{font-size:.72rem;margin-top:7px}
+}
+@media(orientation:landscape) and (max-height:520px){
+  .app{width:calc(100% - 10px);padding:4px 0}
+  header{margin-bottom:4px}
+  .connection{grid-column:auto;grid-row:auto}
+  .layout{grid-template-columns:minmax(0,1fr) 240px;gap:5px}
+  .canvas-wrap{height:calc(100vh - 115px);min-height:230px}
+  .side-card{padding:5px;display:flex}
+  .metric-main{display:block;margin:0}
+  .metric-main .label{display:block}
+  .metrics{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .safety{display:none}
+}
+:fullscreen .scope-card{position:fixed;inset:0;z-index:10;border-radius:0;border:0;display:grid;grid-template-rows:auto minmax(0,1fr) auto;background:#fff}
+:fullscreen .canvas-wrap{height:auto}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>Osciloskop</h1>
+
+    <div class="connection">
+      <span>Připojení:</span>
+      <div class="transport-switch" role="radiogroup" aria-label="Typ připojení">
+        <label id="ble_label" class="transport-option" for="ble">
+          <input type="radio" id="ble" name="type" value="1" checked>
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M12 3v18l6-5-6-4 6-4-6-5Z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="m6 7 12 9M6 17 18 8" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+          <span>Bluetooth</span>
+        </label>
+        <label id="usb_label" class="transport-option" for="usb">
+          <input type="radio" id="usb" name="type" value="0">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M12 3v12M12 3 9.5 5.5M12 3l2.5 2.5M12 10h5v-2.5M17 7.5h2v2h-2v-2ZM12 13H7v-2.5M7 10.5 4.5 13 7 15.5M12 15v2.5a3.5 3.5 0 0 1-3.5 3.5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="8.5" cy="21" r="1.5" stroke-width="2"/>
+          </svg>
+          <span>USB</span>
+        </label>
+      </div>
+      <span id="support"></span>
+    </div>
+
+    <div class="actions">
+      <button id="connect" class="primary">Připojit</button>
+      <button id="disconnect" disabled>Odpojit</button>
+    </div>
+  </header>
+
+  <div class="layout">
+    <section class="scope-card" id="scopeCard">
+      <div class="scope-head">
+        <div class="scope-title">U(t)</div>
+        <div id="status" class="status">nepřipojen</div>
+      </div>
+
+      <div class="canvas-wrap" id="canvasWrap">
+        <canvas id="scope"></canvas>
+        <div class="empty" id="empty">Připoj Go Direct voltmetr</div>
+      </div>
+
+      <div class="scope-controls">
+        <label>Čas:
+          <select id="window">
+            <option value="0.1">0,10 s</option>
+            <option value="0.2" selected>0,20 s</option>
+            <option value="0.5">0,50 s</option>
+            <option value="1">1 s</option>
+            <option value="2">2 s</option>
+            <option value="5">5 s</option>
+          </select>
+        </label>
+        <label>Vzorkování:
+          <select id="period">
+            <option value="1" selected>1 ms</option>
+            <option value="2">2 ms</option>
+            <option value="5">5 ms</option>
+            <option value="10">10 ms</option>
+          </select>
+        </label>
+        <button id="pause" disabled>Pauza</button>
+        <button id="zero" disabled>Nulovat</button>
+        <button id="fullscreen">Celá obrazovka</button>
+        <span class="device" id="device"></span>
+      </div>
+    </section>
+
+    <aside class="side-card">
+      <div class="metric-main">
+        <span class="label">Efektivní hodnota</span>
+        <span class="number" id="rms">—</span><span class="unit">V</span>
+      </div>
+
+      <div class="metrics">
+        <div class="metric"><div class="label">Amplituda</div><div class="val"><span id="amp">—</span><span class="u"> V</span></div></div>
+        <div class="metric"><div class="label">U<sub>pp</sub></div><div class="val"><span id="pp">—</span><span class="u"> V</span></div></div>
+        <div class="metric"><div class="label">U<sub>max</sub></div><div class="val"><span id="max">—</span><span class="u"> V</span></div></div>
+        <div class="metric"><div class="label">U<sub>min</sub></div><div class="val"><span id="min">—</span><span class="u"> V</span></div></div>
+        <div class="metric"><div class="label">Frekvence</div><div class="val"><span id="freq">—</span><span class="u"> Hz</span></div></div>
+        <div class="metric"><div class="label">Perioda</div><div class="val"><span id="periodOut">—</span><span class="u"> ms</span></div></div>
+        <div class="metric"><div class="label">DC složka</div><div class="val"><span id="dc">—</span><span class="u"> V</span></div></div>
+        <div class="metric"><div class="label">AC RMS</div><div class="val"><span id="acrms">—</span><span class="u"> V</span></div></div>
+      </div>
+
+      <div class="note">RMS je počítáno přímo ze vzorků v zobrazeném časovém okně. Frekvence se určuje z průchodů signálu přes jeho střední hodnotu.</div>
+    </aside>
+  </div>
+
+  <div class="safety"><b>Bezpečnost:</b> používej pouze bezpečné malé napětí ze školního zdroje nebo transformátoru. Nepřipojuj voltmetr přímo k síťovému napětí.</div>
+</div>
+
+<script>
+(()=>{
+'use strict';
+
+const state={
+  device:null,sensor:null,offset:0,paused:false,
+  samples:[],maxSamples:10000,lastDraw:0,startTime:0
+};
+
+const els={
+  connect:document.querySelector('#connect'),
+  disconnect:document.querySelector('#disconnect'),
+  pause:document.querySelector('#pause'),
+  zero:document.querySelector('#zero'),
+  fullscreen:document.querySelector('#fullscreen'),
+  window:document.querySelector('#window'),
+  period:document.querySelector('#period'),
+  status:document.querySelector('#status'),
+  device:document.querySelector('#device'),
+  canvas:document.querySelector('#scope'),
+  canvasWrap:document.querySelector('#canvasWrap'),
+  empty:document.querySelector('#empty'),
+  rms:document.querySelector('#rms'),
+  amp:document.querySelector('#amp'),
+  pp:document.querySelector('#pp'),
+  max:document.querySelector('#max'),
+  min:document.querySelector('#min'),
+  freq:document.querySelector('#freq'),
+  periodOut:document.querySelector('#periodOut'),
+  dc:document.querySelector('#dc'),
+  acrms:document.querySelector('#acrms')
+};
+
+const ctx=els.canvas.getContext('2d');
+
+function setStatus(text,type=''){
+  els.status.textContent=text;
+  els.status.className='status'+(type?' '+type:'');
+}
+
+function findVoltageSensor(device){
+  const sensors=device?.sensors||[];
+  const voltageName=/voltage|potential|napětí|napeti/i;
+  const voltageUnit=/^m?v$/i;
+  return sensors.find(s=>s.enabled && voltageName.test(String(s.name||'')))
+    || sensors.find(s=>s.enabled && voltageUnit.test(String(s.unit||'').trim()))
+    || sensors.find(s=>voltageName.test(String(s.name||'')))
+    || sensors.find(s=>voltageUnit.test(String(s.unit||'').trim()))
+    || sensors[0]
+    || null;
+}
+
+function factorToVolts(unit){
+  const u=String(unit||'').trim().toLowerCase();
+  if(u==='v')return 1;
+  if(u==='mv')return .001;
+  return null;
+}
+
+function fmt(v,d=2){
+  return Number.isFinite(v)
+    ? v.toLocaleString('cs-CZ',{minimumFractionDigits:d,maximumFractionDigits:d})
+    : '—';
+}
+
+function currentWindow(){
+  const duration=Number(els.window.value)||.2;
+  if(!state.samples.length)return [];
+  const end=state.samples[state.samples.length-1].t;
+  const start=end-duration;
+  let i=state.samples.length-1;
+  while(i>0 && state.samples[i-1].t>=start)i--;
+  return state.samples.slice(i);
+}
+
+function median(arr){
+  if(!arr.length)return NaN;
+  const a=[...arr].sort((x,y)=>x-y);
+  const m=Math.floor(a.length/2);
+  return a.length%2?a[m]:(a[m-1]+a[m])/2;
+}
+
+function analyse(data){
+  if(data.length<3)return null;
+  const vals=data.map(p=>p.v);
+  const n=vals.length;
+  const dc=vals.reduce((a,b)=>a+b,0)/n;
+  const rms=Math.sqrt(vals.reduce((a,b)=>a+b*b,0)/n);
+  const acrms=Math.sqrt(vals.reduce((a,b)=>a+(b-dc)*(b-dc),0)/n);
+  const min=Math.min(...vals),max=Math.max(...vals);
+  const pp=max-min,amp=pp/2;
+
+  let freq=NaN;
+  if(pp>0.002){
+    const hyst=Math.max(pp*.03,.001);
+    const crossings=[];
+    let armed=false;
+    for(let i=1;i<data.length;i++){
+      const y0=data[i-1].v-dc,y1=data[i].v-dc;
+      if(y0<-hyst)armed=true;
+      if(armed && y0<=0 && y1>0){
+        const dt=data[i].t-data[i-1].t;
+        const frac=(0-y0)/(y1-y0);
+        crossings.push(data[i-1].t+frac*dt);
+        armed=false;
+      }
+    }
+    if(crossings.length>=2){
+      const periods=[];
+      for(let i=1;i<crossings.length;i++){
+        const p=crossings[i]-crossings[i-1];
+        if(p>0)periods.push(p);
+      }
+      const T=median(periods);
+      if(Number.isFinite(T)&&T>0)freq=1/T;
+    }
+  }
+  return {dc,rms,acrms,min,max,pp,amp,freq};
+}
+
+function updateMetrics(){
+  const a=analyse(currentWindow());
+  if(!a){
+    ['rms','amp','pp','max','min','freq','periodOut','dc','acrms'].forEach(k=>els[k].textContent='—');
+    return;
+  }
+  els.rms.textContent=fmt(a.rms,a.rms<1?3:2);
+  els.amp.textContent=fmt(a.amp,a.amp<1?3:2);
+  els.pp.textContent=fmt(a.pp,a.pp<1?3:2);
+  els.max.textContent=fmt(a.max,a.max<1?3:2);
+  els.min.textContent=fmt(a.min,Math.abs(a.min)<1?3:2);
+  els.dc.textContent=fmt(a.dc,Math.abs(a.dc)<1?3:2);
+  els.acrms.textContent=fmt(a.acrms,a.acrms<1?3:2);
+  els.freq.textContent=Number.isFinite(a.freq)?fmt(a.freq,a.freq<10?2:1):'—';
+  els.periodOut.textContent=Number.isFinite(a.freq)?fmt(1000/a.freq,(1000/a.freq)<10?2:1):'—';
+}
+
+function resizeCanvas(){
+  const r=els.canvas.getBoundingClientRect();
+  const dpr=Math.min(window.devicePixelRatio||1,2);
+  const w=Math.max(1,Math.round(r.width*dpr));
+  const h=Math.max(1,Math.round(r.height*dpr));
+  if(els.canvas.width!==w||els.canvas.height!==h){
+    els.canvas.width=w;els.canvas.height=h;
+  }
+  return {w,h,dpr};
+}
+
+function draw(){
+  const {w,h,dpr}=resizeCanvas();
+  ctx.clearRect(0,0,w,h);
+  ctx.fillStyle='#ffffff';ctx.fillRect(0,0,w,h);
+
+  const padL=52*dpr,padR=12*dpr,padT=12*dpr,padB=30*dpr;
+  const W=w-padL-padR,H=h-padT-padB;
+  const data=currentWindow();
+  const duration=Number(els.window.value)||.2;
+  const tEnd=data.length?data[data.length-1].t:duration;
+  const tStart=tEnd-duration;
+
+  let yMin=-1,yMax=1;
+  if(data.length){
+    const vals=data.map(p=>p.v);
+    const mn=Math.min(...vals),mx=Math.max(...vals);
+    const range=Math.max(mx-mn,.02);
+    const margin=range*.12;
+    yMin=mn-margin;yMax=mx+margin;
+    if(yMin>0)yMin=0;
+    if(yMax<0)yMax=0;
+    if(yMax-yMin<.1){
+      const mid=(yMin+yMax)/2;
+      yMin=mid-.05;yMax=mid+.05;
+    }
+  }
+
+  const xOf=t=>padL+(t-tStart)/duration*W;
+  const yOf=v=>padT+(yMax-v)/(yMax-yMin)*H;
+
+  ctx.lineWidth=1*dpr;
+  ctx.strokeStyle='#dbe3ee';
+  for(let i=0;i<=10;i++){
+    const x=padL+W*i/10;
+    ctx.beginPath();ctx.moveTo(x,padT);ctx.lineTo(x,padT+H);ctx.stroke();
+  }
+  for(let i=0;i<=8;i++){
+    const y=padT+H*i/8;
+    ctx.beginPath();ctx.moveTo(padL,y);ctx.lineTo(padL+W,y);ctx.stroke();
+  }
+
+  if(yMin<=0&&yMax>=0){
+    ctx.strokeStyle='#94a3b8';ctx.lineWidth=1.5*dpr;
+    const y0=yOf(0);ctx.beginPath();ctx.moveTo(padL,y0);ctx.lineTo(padL+W,y0);ctx.stroke();
+  }
+
+  ctx.fillStyle='#667085';ctx.font=`${11*dpr}px system-ui`;
+  ctx.textAlign='right';ctx.textBaseline='middle';
+  for(let i=0;i<=4;i++){
+    const val=yMax-(yMax-yMin)*i/4;
+    const y=padT+H*i/4;
+    ctx.fillText(fmt(val,Math.abs(yMax-yMin)<2?2:1),padL-6*dpr,y);
+  }
+  ctx.textAlign='center';ctx.textBaseline='top';
+  for(let i=0;i<=5;i++){
+    const sec=duration*i/5;
+    const x=padL+W*i/5;
+    ctx.fillText(fmt(sec,duration<1?2:1)+' s',x,padT+H+6*dpr);
+  }
+
+  if(data.length>1){
+    ctx.strokeStyle='#2563eb';ctx.lineWidth=2.2*dpr;ctx.lineJoin='round';ctx.lineCap='round';
+    ctx.beginPath();
+    let started=false;
+    for(const p of data){
+      const x=xOf(p.t),y=yOf(p.v);
+      if(x<padL-2*dpr||x>padL+W+2*dpr)continue;
+      if(!started){ctx.moveTo(x,y);started=true}else ctx.lineTo(x,y);
+    }
+    ctx.stroke();
+  }
+
+  ctx.strokeStyle='#cbd5e1';ctx.lineWidth=1*dpr;
+  ctx.strokeRect(padL,padT,W,H);
+
+  els.empty.style.display=data.length?'none':'flex';
+}
+
+function updateUI(){
+  updateMetrics();draw();
+}
+
+async function applyPeriod(){
+  if(!state.device)return;
+  try{
+    state.device.stop();
+    state.samples=[];
+    state.startTime=performance.now()/1000;
+    state.device.start(Number(els.period.value));
+  }catch(err){console.error(err)}
+}
+
+async function connect(){
+  if(state.device)return;
+  els.connect.disabled=true;setStatus('připojuji…');
+  try{
+    if(!window.godirect)throw new Error('Nepodařilo se načíst knihovnu Vernier Go Direct.');
+    const bluetooth=document.querySelector('input[name="type"]:checked').value==="1";
+    const device=await godirect.selectDevice(bluetooth);
+    if(!device)throw new DOMException('Nebylo vybráno žádné zařízení.');
+
+    state.device=device;
+    device.on('device-closed',()=>{if(state.device===device)reset()});
+    try{device.stop()}catch(_){}
+
+    const sensor=findVoltageSensor(device);
+    if(!sensor)throw new Error('Nebyl nalezen kanál napětí.');
+    const factor=factorToVolts(sensor.unit);
+    if(factor===null)throw new Error('Kanál napětí má nepodporovanou jednotku: '+(sensor.unit||'bez jednotky'));
+
+    for(const s of device.sensors||[]){
+      try{s.setEnabled(s===sensor)}catch(_){}
+    }
+
+    state.sensor=sensor;state.offset=0;state.samples=[];state.paused=false;
+    state.startTime=performance.now()/1000;
+    els.device.textContent=`${device.name||'Go Direct'} · ${sensor.name||'Voltage'}`;
+
+    sensor.on('value-changed',s=>{
+      if(state.paused)return;
+      const raw=Number(s.value);
+      if(!Number.isFinite(raw))return;
+      const t=performance.now()/1000-state.startTime;
+      const v=raw*factor-state.offset;
+      state.samples.push({t,v});
+      if(state.samples.length>state.maxSamples)state.samples.splice(0,state.samples.length-state.maxSamples);
+      const now=performance.now();
+      if(now-state.lastDraw>50){state.lastDraw=now;updateUI()}
+    });
+
+    device.start(Number(els.period.value));
+
+    els.connect.textContent='Připojeno';
+    els.disconnect.disabled=false;els.pause.disabled=false;els.zero.disabled=false;
+    setStatus('připojen','ok');
+    updateUI();
+  }catch(err){
+    console.error(err);
+    try{if(state.device)await state.device.close()}catch(_){}
+    const cancelled=err?.name==='NotFoundError'||/cancel|cancelled|canceled|No device selected/i.test(String(err));
+    reset(cancelled?'výběr zrušen':'chyba',cancelled?'':'err');
+    if(!cancelled)alert(err?.message||String(err));
+  }finally{
+    els.connect.disabled=!!state.device;
+    if(!state.device)els.connect.textContent='Připojit';
+  }
+}
+
+function reset(status='nepřipojen',type=''){
+  state.device=null;state.sensor=null;state.offset=0;state.samples=[];state.paused=false;
+  els.connect.disabled=false;els.connect.textContent='Připojit';
+  els.disconnect.disabled=true;els.pause.disabled=true;els.pause.textContent='Pauza';els.zero.disabled=true;
+  els.device.textContent='';setStatus(status,type);updateUI();
+}
+
+async function disconnect(){
+  const d=state.device;if(!d){reset();return}
+  setStatus('odpojuji…');
+  try{d.stop()}catch(_){}
+  try{await d.close()}catch(_){}
+  if(state.device===d)reset();
+}
+
+els.connect.addEventListener('click',connect);
+els.disconnect.addEventListener('click',disconnect);
+els.period.addEventListener('change',applyPeriod);
+els.window.addEventListener('change',updateUI);
+els.pause.addEventListener('click',()=>{
+  state.paused=!state.paused;
+  els.pause.textContent=state.paused?'Pokračovat':'Pauza';
+});
+els.zero.addEventListener('click',()=>{
+  const data=currentWindow();
+  if(!data.length)return;
+  const dc=data.reduce((a,p)=>a+p.v,0)/data.length;
+  state.offset+=dc;
+  state.samples=state.samples.map(p=>({t:p.t,v:p.v-dc}));
+  updateUI();
+});
+els.fullscreen.addEventListener('click',async()=>{
+  try{
+    const card=document.querySelector('#scopeCard');
+    if(!document.fullscreenElement)await card.requestFullscreen();
+    else await document.exitFullscreen();
+  }catch(_){}
+});
+
+const ro=new ResizeObserver(()=>draw());
+ro.observe(els.canvasWrap);
+document.addEventListener('fullscreenchange',()=>setTimeout(draw,30));
+
+const ble=document.querySelector('#ble'),usb=document.querySelector('#usb');
+const bleLabel=document.querySelector('#ble_label'),usbLabel=document.querySelector('#usb_label');
+if(!navigator.bluetooth){ble.disabled=true;bleLabel.classList.add('unsupported');if(navigator.hid)usb.checked=true}
+if(!navigator.hid){usb.disabled=true;usbLabel.classList.add('unsupported');if(navigator.bluetooth)ble.checked=true}
+document.querySelector('#support').textContent=
+  (!navigator.bluetooth||!navigator.hid)
+    ? `${navigator.bluetooth?'':'Bluetooth není podporováno'}${(!navigator.bluetooth&&!navigator.hid)?' · ':''}${navigator.hid?'':'USB není podporováno'}`
+    : '';
+
+updateUI();
+})();
+</script>
+</body>
+</html>
