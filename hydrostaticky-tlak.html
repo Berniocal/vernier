@@ -14,7 +14,7 @@
 html,body{margin:0;min-height:100%;font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--text)}
 button,input{font:inherit}
 .app{width:min(960px,calc(100% - 28px));margin:0 auto;padding:20px 0 36px}
-header{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:14px;margin-bottom:18px}
+header{display:grid;grid-template-columns:auto 1fr;align-items:center;gap:14px;margin-bottom:12px}
 h1{margin:0;font-size:clamp(1.3rem,2.3vw,2rem);font-weight:800;letter-spacing:-.02em}
 .connection{display:flex;align-items:center;justify-content:center;gap:9px;color:var(--muted);font-size:.9rem}
 .transport-switch,.unit-switch{display:inline-flex;align-items:center;gap:4px;padding:4px;background:#e8edf3;border:1px solid #d6dde7;border-radius:13px;box-shadow:inset 0 1px 2px rgba(15,23,42,.05)}
@@ -24,16 +24,14 @@ h1{margin:0;font-size:clamp(1.3rem,2.3vw,2rem);font-weight:800;letter-spacing:-.
 .transport-option:hover,.unit-option:hover{background:rgba(255,255,255,.65);color:#111827}
 .transport-option input,.unit-option input{position:absolute;opacity:0;pointer-events:none}
 .transport-option:has(input:checked),.unit-option:has(input:checked){background:#fff;color:#111827;box-shadow:0 1px 2px rgba(15,23,42,.12),0 3px 9px rgba(15,23,42,.08)}
-.transport-option svg{width:18px;height:18px;stroke:currentColor}
+.transport-option:has(input:focus-visible),.unit-option:has(input:focus-visible){outline:3px solid rgba(37,99,235,.22);outline-offset:1px}
+.transport-option svg{width:18px;height:18px;flex:0 0 auto;stroke:currentColor}
 .transport-option.unsupported{opacity:.38;cursor:not-allowed}
-.actions{display:flex;justify-content:flex-end;gap:8px}
-button{border:1px solid var(--line);background:#fff;border-radius:10px;padding:9px 14px;cursor:pointer;font-weight:700;color:var(--text)}
+button{border:1px solid var(--line);background:#fff;border-radius:10px;padding:8px 12px;cursor:pointer;font-weight:650;color:var(--text)}
 button:hover{background:#f8fafc}
-button:disabled{opacity:.4;cursor:not-allowed}
+button:disabled{opacity:.42;cursor:not-allowed}
 .primary{background:#111827;color:#fff;border-color:#111827}
 .primary:hover{background:#1f2937}
-.zero{background:#2563eb;color:#fff;border-color:#2563eb}
-.zero:hover{background:#1d4ed8}
 .card{background:var(--card);border:1px solid var(--line);border-radius:22px;box-shadow:0 10px 35px rgba(15,23,42,.06);overflow:hidden}
 .topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 18px;border-bottom:1px solid var(--line)}
 .status{color:var(--muted);font-size:.88rem}
@@ -45,27 +43,27 @@ button:disabled{opacity:.4;cursor:not-allowed}
 .value{font-size:clamp(5.2rem,15vw,10rem);font-weight:800;line-height:.85;letter-spacing:-.065em;font-variant-numeric:tabular-nums lining-nums}
 .unit{font-size:clamp(2rem,5vw,4rem);font-weight:750;color:#475467}
 .zero-info{height:24px;margin-top:18px;color:#2563eb;font-weight:650;font-size:.9rem}
-.controls{display:grid;grid-template-columns:1fr auto auto;gap:10px;padding:14px 18px;border-top:1px solid var(--line);align-items:center}
-.units{display:flex;align-items:center;gap:9px}
+.units{display:flex;align-items:center;justify-content:center;gap:9px;padding:10px 14px;border-top:1px solid var(--line);background:#fbfcfd}
 .units>span{font-size:.85rem;color:var(--muted)}
+.controls{border-top:1px solid var(--line);padding:6px 8px;display:flex;gap:7px;align-items:center}
+.controls button{flex:1;padding:7px 10px}
 .device{font-size:.78rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:7px;padding:0 2px}
 .help{margin-top:12px;color:var(--muted);font-size:.86rem;line-height:1.45;text-align:center}
 @media(max-width:720px){
   .app{width:calc(100% - 12px);padding:8px 0 18px}
-  header{grid-template-columns:1fr auto;gap:7px;margin-bottom:8px}
+  header{grid-template-columns:1fr;gap:7px;margin-bottom:7px}
   h1{font-size:1.08rem}
-  .connection{grid-column:1/-1;grid-row:2;justify-content:flex-start;font-size:.78rem}
+  .connection{grid-column:1;grid-row:2;justify-content:flex-start;font-size:.78rem}
   .connection>span:first-child{display:none}
   .transport-switch{padding:3px;gap:3px}
   .transport-option{min-width:100px;padding:7px 10px;font-size:.76rem}
   #support{display:none}
-  .actions button{padding:6px 8px;font-size:.74rem}
   .display{min-height:280px;padding:22px 10px 18px}
   .value{font-size:clamp(4rem,23vw,7rem)}
   .unit{font-size:clamp(1.7rem,9vw,2.8rem)}
-  .controls{grid-template-columns:1fr 1fr;gap:7px;padding:10px}
-  .units{grid-column:1/-1;justify-content:center;order:3}
-  .controls button{padding:8px 8px}
+  .units{justify-content:center;padding:8px 6px}
+  .controls{padding:4px 5px;gap:4px}
+  .controls button{padding:5px 4px;font-size:.75rem}
 }
 </style>
 </head>
@@ -97,10 +95,6 @@ button:disabled{opacity:.4;cursor:not-allowed}
       <span id="support"></span>
     </div>
 
-    <div class="actions">
-      <button id="connect" class="primary">Připojit</button>
-      <button id="disconnect" disabled>Odpojit</button>
-    </div>
   </header>
 
   <section class="card">
@@ -119,22 +113,23 @@ button:disabled{opacity:.4;cursor:not-allowed}
       <div class="device" id="device"></div>
     </div>
 
-    <div class="controls">
-      <div class="units">
-        <span>Jednotka:</span>
-        <div class="unit-switch" role="radiogroup" aria-label="Jednotka tlaku">
-          <label class="unit-option"><input type="radio" name="unit" value="Pa"><span>Pa</span></label>
-          <label class="unit-option"><input type="radio" name="unit" value="hPa"><span>hPa</span></label>
-          <label class="unit-option"><input type="radio" name="unit" value="kPa" checked><span>kPa</span></label>
-        </div>
+    <div class="units">
+      <span>Jednotka:</span>
+      <div class="unit-switch" role="radiogroup" aria-label="Jednotka tlaku">
+        <label class="unit-option"><input type="radio" name="unit" value="Pa"><span>Pa</span></label>
+        <label class="unit-option"><input type="radio" name="unit" value="hPa"><span>hPa</span></label>
+        <label class="unit-option"><input type="radio" name="unit" value="kPa" checked><span>kPa</span></label>
       </div>
+    </div>
 
-      <button id="zero" class="zero" disabled>Vynulovat</button>
-      <button id="clearZero" disabled>Zrušit nulu</button>
+    <div class="controls">
+      <button id="connect" class="primary">Připojit</button>
+      <button id="zero" disabled>Nulovat</button>
+      <button id="disconnect" disabled>Odpojit</button>
     </div>
   </section>
 
-  <div class="help">Po vynulování se aktuální tlak bere jako 0 a displej ukazuje pouze změnu tlaku vůči této hodnotě.</div>
+  <div class="help">Po stisku Nulovat se aktuální tlak vezme jako 0. Dalším stiskem můžeš nulu nastavit znovu.</div>
 </div>
 
 <script>
@@ -155,7 +150,6 @@ const els={
   connect:document.querySelector('#connect'),
   disconnect:document.querySelector('#disconnect'),
   zero:document.querySelector('#zero'),
-  clearZero:document.querySelector('#clearZero'),
   value:document.querySelector('#value'),
   unit:document.querySelector('#unit'),
   status:document.querySelector('#status'),
@@ -293,7 +287,6 @@ async function connect(){
     els.connect.textContent='Připojeno';
     els.disconnect.disabled=false;
     els.zero.disabled=false;
-    els.clearZero.disabled=true;
 
   }catch(err){
     console.error(err);
@@ -330,7 +323,6 @@ function reset(status='nepřipojen',type=''){
   els.connect.textContent='Připojit';
   els.disconnect.disabled=true;
   els.zero.disabled=true;
-  els.clearZero.disabled=true;
   els.device.textContent='';
   els.readingLabel.textContent='Aktuální tlak';
   els.modeLabel.textContent='Tlak';
@@ -361,14 +353,6 @@ els.zero.addEventListener('click',()=>{
   if(!Number.isFinite(state.rawPa))return;
   state.zeroPa=state.rawPa;
   state.zeroActive=true;
-  els.clearZero.disabled=false;
-  render();
-});
-
-els.clearZero.addEventListener('click',()=>{
-  state.zeroPa=0;
-  state.zeroActive=false;
-  els.clearZero.disabled=true;
   render();
 });
 
