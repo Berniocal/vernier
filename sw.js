@@ -1,5 +1,5 @@
 // Vernier app cache
-const CACHE_VERSION = 'v13';
+const CACHE_VERSION = 'v14';
 const CACHE_PREFIX = 'gdx-lab-';
 const CACHE_NAME = CACHE_PREFIX + CACHE_VERSION;
 
@@ -9,7 +9,9 @@ const ASSETS = [
   './go-direct-lab.html',
   './rovnovaha-sil.html',
   './hydrostaticky-tlak.html',
-  './osciloskop.html',\n  './pohyb-kmitani.html',\n  './stare-senzory.html',
+  './osciloskop.html',
+  './pohyb-kmitani.html',
+  './stare-senzory.html',
   './manifest.json',
   './icon.svg'
 ];
