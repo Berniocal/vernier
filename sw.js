@@ -9,7 +9,7 @@ const ASSETS = [
   './go-direct-lab.html',
   './rovnovaha-sil.html',
   './hydrostaticky-tlak.html',
-  './osciloskop.html',
+  './osciloskop.html',\n  './stare-senzory.html',
   './manifest.json',
   './icon.svg'
 ];
