@@ -1,0 +1,388 @@
+<!doctype html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Starší Vernier senzory – experimentální</title>
+<style>
+:root{--bg:#f4f5f7;--card:#fff;--text:#111827;--muted:#667085;--line:#d9dee7;--dark:#101828;--blue:#2563eb;--green:#15803d;--red:#b42318}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--text)}
+button,select{font:inherit}
+.app{width:min(980px,calc(100% - 24px));margin:0 auto;padding:18px 0 34px}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
+h1{margin:0;font-size:clamp(1.25rem,2.4vw,1.9rem)}
+button{border:1px solid var(--line);background:#fff;border-radius:10px;padding:8px 12px;cursor:pointer;font-weight:700;color:var(--text)}
+button:hover{background:#f8fafc}
+button:disabled{opacity:.42;cursor:not-allowed}
+.primary{background:var(--dark);color:#fff;border-color:var(--dark)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;overflow:hidden;box-shadow:0 1px 2px rgba(16,24,40,.04)}
+.top{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;border-bottom:1px solid var(--line)}
+.status{font-size:.84rem;color:var(--muted)}
+.status.ok{color:var(--green)}.status.err{color:var(--red)}
+.device{padding:16px 14px 4px}
+.device-name{font-size:1.35rem;font-weight:800}
+.meta{margin-top:4px;color:var(--muted);font-size:.84rem;line-height:1.45}
+.big{display:flex;align-items:baseline;justify-content:center;gap:.18em;min-height:210px;padding:18px}
+.value{font-size:clamp(4.5rem,15vw,8.5rem);line-height:.86;font-weight:800;letter-spacing:-.06em;font-variant-numeric:tabular-nums}
+.unit{font-size:1.4rem;font-weight:750;color:var(--muted)}
+.controls{display:flex;gap:7px;align-items:center;flex-wrap:wrap;padding:10px;border-top:1px solid var(--line)}
+.controls button{flex:1;min-width:120px}
+.controls label{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:.8rem}
+.controls select{border:1px solid var(--line);border-radius:8px;background:#fff;padding:6px 8px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+.panel{background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px;min-width:0}
+.panel h2{font-size:1rem;margin:0 0 8px}
+.row{display:grid;grid-template-columns:130px 1fr;gap:8px;padding:5px 0;border-bottom:1px solid #eef2f6;font-size:.84rem}
+.row:last-child{border-bottom:0}
+.row span:first-child{color:var(--muted)}
+.log{height:210px;overflow:auto;background:#0f172a;color:#dbeafe;border-radius:10px;padding:9px;font:12px/1.45 ui-monospace,SFMono-Regular,Consolas,monospace;white-space:pre-wrap}
+.note{margin-top:10px;padding:10px 12px;background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;border-radius:12px;font-size:.82rem;line-height:1.45}
+@media(max-width:680px){
+  .app{width:calc(100% - 10px);padding:7px 0 18px}
+  header{margin-bottom:7px}
+  h1{font-size:1.05rem}
+  header button{padding:6px 8px;font-size:.74rem}
+  .big{min-height:175px;padding:12px}
+  .value{font-size:clamp(4rem,22vw,6.5rem)}
+  .grid{grid-template-columns:1fr}
+  .controls{padding:6px;gap:4px}
+  .controls button{min-width:0;padding:6px 5px;font-size:.76rem}
+  .controls label{width:100%;justify-content:center}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>Starší Vernier senzory</h1>
+    <button id="connect" class="primary">Připojit přes USB</button>
+  </header>
+
+  <section class="card">
+    <div class="top">
+      <strong>GoIO / WebHID</strong>
+      <span id="status" class="status">nepřipojen</span>
+    </div>
+
+    <div class="device">
+      <div id="deviceName" class="device-name">—</div>
+      <div id="deviceMeta" class="meta">Podporované testovací typy: Go!Link, Go!Temp, Go!Motion.</div>
+    </div>
+
+    <div class="big">
+      <span id="value" class="value">—</span>
+      <span class="unit">RAW</span>
+    </div>
+
+    <div class="controls">
+      <button id="start" disabled>Start měření</button>
+      <button id="stop" disabled>Stop</button>
+      <button id="zero" disabled>Vynulovat RAW</button>
+      <button id="disconnect" disabled>Odpojit</button>
+      <label>Perioda:
+        <select id="period" disabled>
+          <option value="40">40 ms</option>
+          <option value="100">100 ms</option>
+          <option value="200">200 ms</option>
+          <option value="500">500 ms</option>
+          <option value="1000">1 s</option>
+        </select>
+      </label>
+    </div>
+  </section>
+
+  <div class="grid">
+    <section class="panel">
+      <h2>Zařízení</h2>
+      <div class="row"><span>Vendor ID</span><span id="vid">—</span></div>
+      <div class="row"><span>Product ID</span><span id="pid">—</span></div>
+      <div class="row"><span>Typ</span><span id="type">—</span></div>
+      <div class="row"><span>Sensor ID</span><span id="sensorId">—</span></div>
+      <div class="row"><span>Report ID OUT</span><span id="outReport">—</span></div>
+      <div class="row"><span>Počet vzorků</span><span id="count">0</span></div>
+    </section>
+
+    <section class="panel">
+      <h2>Diagnostika</h2>
+      <div id="log" class="log"></div>
+    </section>
+  </div>
+
+  <div class="note"><b>Experimentální verze:</b> zatím zobrazuje syrové hodnoty RAW. Cílem této stránky je nejdřív ověřit komunikaci s vašimi staršími kusy. Po úspěšném testu doplníme Auto-ID, kalibrace a fyzikální jednotky pro konkrétní BTA senzory.</div>
+</div>
+
+<script>
+(()=>{
+'use strict';
+
+const VERNIER_VID=0x08F7;
+const PRODUCTS={
+  0x0002:{name:'Go!Temp',tick:0.000128,defaultMs:500,kind:'temp'},
+  0x0003:{name:'Go!Link',tick:0.001,defaultMs:40,kind:'link'},
+  0x0004:{name:'Go!Motion',tick:0.001,defaultMs:50,kind:'motion'}
+};
+
+const CMD={
+  START:0x18,STOP:0x19,INIT:0x1A,SET_PERIOD:0x1B,GET_PERIOD:0x1C,GET_SENSOR_ID:0x28
+};
+
+const state={
+  device:null,info:null,outReportId:0,pending:new Map(),count:0,offset:0,lastRaw:NaN,measuring:false
+};
+
+const els={};
+for(const id of ['connect','disconnect','start','stop','zero','period','status','deviceName','deviceMeta','value','vid','pid','type','sensorId','outReport','count','log']) els[id]=document.getElementById(id);
+
+function log(msg){
+  const t=new Date().toLocaleTimeString('cs-CZ');
+  els.log.textContent+=`[${t}] ${msg}\n`;
+  els.log.scrollTop=els.log.scrollHeight;
+}
+
+function setStatus(text,type=''){
+  els.status.textContent=text;
+  els.status.className='status'+(type?' '+type:'');
+}
+
+function hex(n,w=4){return '0x'+Number(n).toString(16).toUpperCase().padStart(w,'0')}
+
+function collectReports(collections,key,out=[]){
+  for(const c of collections||[]){
+    for(const r of c[key]||[]) out.push(r);
+    collectReports(c.children||[],key,out);
+  }
+  return out;
+}
+
+function findOutReportId(device){
+  const reports=collectReports(device.collections,'outputReports');
+  if(reports.length)return reports[0].reportId||0;
+  return 0;
+}
+
+function packetBytes(event){
+  return new Uint8Array(event.data.buffer,event.data.byteOffset,event.data.byteLength);
+}
+
+function resolveResponse(bytes){
+  if(bytes.length<2)return;
+  const cmd=bytes[1];
+  const list=state.pending.get(cmd);
+  if(list&&list.length){
+    const item=list.shift();
+    if(!list.length)state.pending.delete(cmd);
+    clearTimeout(item.timer);
+    item.resolve(bytes);
+  }
+}
+
+function onInputReport(event){
+  const b=packetBytes(event);
+  if(!b.length)return;
+
+  const packetType=b[0]&0xC0;
+  if(packetType!==0){
+    log('RESP '+Array.from(b).map(x=>x.toString(16).padStart(2,'0')).join(' '));
+    resolveResponse(b);
+    return;
+  }
+
+  if(!state.info)return;
+
+  if(state.info.kind==='motion'){
+    if(b.length>=7){
+      const dv=new DataView(b.buffer,b.byteOffset,b.byteLength);
+      const raw=dv.getInt32(2,true);
+      const measType=b[6];
+      acceptRaw(raw,`Go!Motion typ ${measType}`);
+    }
+    return;
+  }
+
+  const n=Math.min(b[0]&0x3F,3);
+  if(n<1)return;
+  const dv=new DataView(b.buffer,b.byteOffset,b.byteLength);
+  for(let i=0;i<n;i++){
+    const pos=2+i*2;
+    if(pos+1<b.length){
+      const raw=dv.getInt16(pos,true);
+      acceptRaw(raw);
+    }
+  }
+}
+
+function acceptRaw(raw,note=''){
+  state.lastRaw=raw;
+  state.count++;
+  els.count.textContent=String(state.count);
+  els.value.textContent=String(raw-state.offset);
+  if(note&&state.count<4)log(`MEAS raw=${raw} (${note})`);
+}
+
+async function sendPacket(bytes){
+  if(!state.device)throw new Error('Zařízení není připojeno.');
+  const packet=new Uint8Array(8);
+  packet.set(bytes.slice(0,8));
+  await state.device.sendReport(state.outReportId,packet);
+}
+
+function waitForResponse(cmd,timeout=1800){
+  return new Promise((resolve,reject)=>{
+    const timer=setTimeout(()=>{
+      const list=state.pending.get(cmd)||[];
+      state.pending.set(cmd,list.filter(x=>x.resolve!==resolve));
+      reject(new Error('Timeout odpovědi na příkaz '+hex(cmd,2)));
+    },timeout);
+    const list=state.pending.get(cmd)||[];
+    list.push({resolve,reject,timer});
+    state.pending.set(cmd,list);
+  });
+}
+
+async function command(cmd,params=[],timeout=1800){
+  const wait=waitForResponse(cmd,timeout);
+  await sendPacket(Uint8Array.from([cmd,...params]));
+  return wait;
+}
+
+async function initDevice(){
+  log('INIT '+hex(CMD.INIT,2));
+  try{
+    await command(CMD.INIT,[],6000);
+    log('INIT OK');
+  }catch(e){
+    log('INIT: '+e.message+' — pokračuji v testu.');
+  }
+
+  if(state.info.kind==='link'){
+    try{
+      const r=await command(CMD.GET_SENSOR_ID);
+      if(r.length>=6){
+        const dv=new DataView(r.buffer,r.byteOffset,r.byteLength);
+        const id=dv.getUint32(2,true);
+        els.sensorId.textContent=String(id)+' ('+hex(id,8)+')';
+        log('Sensor ID: '+id);
+      }
+    }catch(e){
+      log('Sensor ID se nepodařilo načíst: '+e.message);
+    }
+  }
+}
+
+async function setPeriod(){
+  const ms=Number(els.period.value);
+  const seconds=ms/1000;
+  const ticks=Math.max(1,Math.round(seconds/state.info.tick));
+  const p=[ticks&255,(ticks>>8)&255,(ticks>>16)&255,(ticks>>24)&255];
+  log(`Perioda ${ms} ms = ${ticks} ticks`);
+  await command(CMD.SET_PERIOD,p);
+}
+
+async function startMeasurement(){
+  if(!state.device)return;
+  els.start.disabled=true;
+  try{
+    await setPeriod();
+    await command(CMD.START);
+    state.measuring=true;
+    state.count=0;state.offset=0;els.count.textContent='0';els.value.textContent='—';
+    els.stop.disabled=false;els.zero.disabled=false;
+    setStatus('měřím','ok');
+    log('START OK');
+  }catch(e){
+    log('Start selhal: '+e.message);
+    setStatus('chyba','err');
+    els.start.disabled=false;
+  }
+}
+
+async function stopMeasurement(){
+  if(!state.device)return;
+  try{
+    await command(CMD.STOP);
+    log('STOP OK');
+  }catch(e){
+    log('STOP: '+e.message);
+  }
+  state.measuring=false;
+  els.start.disabled=false;els.stop.disabled=true;els.zero.disabled=true;
+  setStatus('připojen','ok');
+}
+
+async function connect(){
+  if(!navigator.hid){
+    alert('Tento prohlížeč nepodporuje WebHID. Použij Chrome nebo Edge na počítači.');
+    return;
+  }
+  els.connect.disabled=true;
+  setStatus('vybírám zařízení…');
+  try{
+    const devices=await navigator.hid.requestDevice({filters:[
+      {vendorId:VERNIER_VID,productId:0x0002},
+      {vendorId:VERNIER_VID,productId:0x0003},
+      {vendorId:VERNIER_VID,productId:0x0004}
+    ]});
+    const device=devices?.[0];
+    if(!device)throw new DOMException('Nebylo vybráno zařízení.','NotFoundError');
+
+    await device.open();
+    state.device=device;
+    state.info=PRODUCTS[device.productId]||{name:'Neznámý Vernier',tick:.001,defaultMs:100,kind:'unknown'};
+    state.outReportId=findOutReportId(device);
+    device.addEventListener('inputreport',onInputReport);
+
+    els.deviceName.textContent=state.info.name;
+    els.deviceMeta.textContent=device.productName||'Vernier USB HID';
+    els.vid.textContent=hex(device.vendorId);
+    els.pid.textContent=hex(device.productId);
+    els.type.textContent=state.info.name;
+    els.outReport.textContent=String(state.outReportId);
+    els.period.value=String(state.info.defaultMs);
+    if(![...els.period.options].some(o=>o.value===els.period.value)){
+      const o=document.createElement('option');o.value=String(state.info.defaultMs);o.textContent=state.info.defaultMs+' ms';els.period.prepend(o);els.period.value=o.value;
+    }
+
+    els.disconnect.disabled=false;els.start.disabled=false;els.period.disabled=false;
+    setStatus('připojen','ok');
+    log(`Připojeno ${state.info.name}, VID ${hex(device.vendorId)}, PID ${hex(device.productId)}, OUT report ${state.outReportId}`);
+
+    await initDevice();
+  }catch(e){
+    console.error(e);
+    const cancelled=e?.name==='NotFoundError'||/cancel/i.test(String(e));
+    setStatus(cancelled?'výběr zrušen':'chyba',cancelled?'':'err');
+    if(!cancelled)alert(e.message||String(e));
+    els.connect.disabled=false;
+  }finally{
+    if(state.device)els.connect.disabled=true;
+  }
+}
+
+async function disconnect(){
+  if(!state.device)return;
+  try{if(state.measuring)await stopMeasurement()}catch(_){}
+  try{state.device.removeEventListener('inputreport',onInputReport)}catch(_){}
+  try{await state.device.close()}catch(_){}
+  state.device=null;state.info=null;state.pending.clear();state.count=0;state.offset=0;state.lastRaw=NaN;state.measuring=false;
+  els.connect.disabled=false;els.disconnect.disabled=true;els.start.disabled=true;els.stop.disabled=true;els.zero.disabled=true;els.period.disabled=true;
+  els.deviceName.textContent='—';els.deviceMeta.textContent='Podporované testovací typy: Go!Link, Go!Temp, Go!Motion.';
+  for(const id of ['vid','pid','type','sensorId','outReport'])els[id].textContent='—';
+  els.count.textContent='0';els.value.textContent='—';setStatus('nepřipojen');
+  log('Odpojeno');
+}
+
+els.connect.addEventListener('click',connect);
+els.disconnect.addEventListener('click',disconnect);
+els.start.addEventListener('click',startMeasurement);
+els.stop.addEventListener('click',stopMeasurement);
+els.zero.addEventListener('click',()=>{
+  if(!Number.isFinite(state.lastRaw))return;
+  state.offset=state.lastRaw;
+  els.value.textContent='0';
+  log('RAW nula nastavena na '+state.offset);
+});
+})();
+</script>
+</body>
+</html>
