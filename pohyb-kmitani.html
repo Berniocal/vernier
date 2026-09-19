@@ -237,7 +237,7 @@ function acceptSample(pos){
 
   if(!Number.isFinite(state.zero))state.zero=pos;
 
-  const t=state.samples.length?state.samples[state.samples.length-1].t+(now-state.lastAcceptedAt):0;
+  const t=state.samples.length\n    ? state.samples[state.samples.length-1].t+(state.lastAcceptedAt===null?0:(now-state.lastAcceptedAt))\n    : 0;
   state.samples.push({t,pos,x:currentX(pos)});
   if(state.samples.length>12000)state.samples.splice(0,state.samples.length-12000);
 
