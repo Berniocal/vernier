@@ -204,7 +204,7 @@ canvas{display:block;width:100%;height:100%}
         <div class="metric"><div class="label">AC RMS</div><div class="val"><span id="acrms">—</span><span class="u"> V</span></div></div>
       </div>
 
-      <div class="note">RMS je počítáno přímo ze vzorků v zobrazeném časovém okně. Frekvence se určuje z průchodů signálu přes jeho střední hodnotu.</div>
+      <div class="note">RMS je počítáno přímo ze vzorků v zobrazeném časovém okně. Frekvence se určuje z průchodů signálu přes jeho střední hodnotu. Čas vzorků vychází z nastavené periody měření, ne z okamžiku doručení USB/Bluetooth paketu.</div>
     </aside>
   </div>
 
@@ -217,7 +217,8 @@ canvas{display:block;width:100%;height:100%}
 
 const state={
   device:null,sensor:null,offset:0,paused:false,
-  samples:[],maxSamples:10000,lastDraw:0,startTime:0
+  samples:[],maxSamples:20000,lastDraw:0,
+  sampleIndex:0,samplePeriodMs:1
 };
 
 const els={
@@ -446,13 +447,29 @@ function selectedMeasurementPeriodMs(){
   return Number.isFinite(hz)&&hz>0 ? 1000/hz : 10;
 }
 
+function resetSampleClock(){
+  state.sampleIndex=0;
+  state.samplePeriodMs=selectedMeasurementPeriodMs();
+}
+
 async function applyPeriod(){
   if(!state.device)return;
   try{
+    const requested=selectedMeasurementPeriodMs();
+    const sensorMin=Number(state.sensor?.specs?.measurementInfo?.minPeriod);
+    if(Number.isFinite(sensorMin)&&sensorMin>0&&requested<sensorMin){
+      const maxHz=Math.round(1000/sensorMin);
+      const closest=[...els.period.options]
+        .map(o=>Number(o.value))
+        .filter(hz=>Number.isFinite(hz)&&hz<=maxHz)
+        .sort((a,b)=>b-a)[0];
+      if(closest)els.period.value=String(closest);
+    }
     state.device.stop();
     state.samples=[];
-    state.startTime=performance.now()/1000;
-    state.device.start(selectedMeasurementPeriodMs());
+    resetSampleClock();
+    state.device.start(state.samplePeriodMs);
+    updateUI();
   }catch(err){console.error(err)}
 }
 
@@ -479,14 +496,27 @@ async function connect(){
     }
 
     state.sensor=sensor;state.offset=0;state.samples=[];state.paused=false;
-    state.startTime=performance.now()/1000;
+
+    // GDX-VOLT umí až 1000 Hz. Starší @vernier/godirect má obecný limit 10 ms;
+    // použijeme proto minimum, které hlásí přímo zvolený kanál.
+    const sensorMinPeriod=Number(sensor?.specs?.measurementInfo?.minPeriod);
+    if(Number.isFinite(sensorMinPeriod)&&sensorMinPeriod>0){
+      device.minMeasurementPeriod=sensorMinPeriod;
+    }
+    resetSampleClock();
+
     els.device.textContent=`${device.name||'Go Direct'} · ${sensor.name||'Voltage'}`;
 
     sensor.on('value-changed',s=>{
       if(state.paused)return;
       const raw=Number(s.value);
       if(!Number.isFinite(raw))return;
-      const t=performance.now()/1000-state.startTime;
+
+      // Go Direct posílá více vzorků v jednom USB/BLE paketu. Knihovna je potom
+      // vyvolá v rychlém sledu, takže performance.now() zde nedává čas měření.
+      // Každému vzorku proto přiřadíme čas podle nastavené periody snímání.
+      const t=state.sampleIndex*state.samplePeriodMs/1000;
+      state.sampleIndex++;
       const v=raw*factor-state.offset;
       state.samples.push({t,v});
       if(state.samples.length>state.maxSamples)state.samples.splice(0,state.samples.length-state.maxSamples);
@@ -494,7 +524,7 @@ async function connect(){
       if(now-state.lastDraw>50){state.lastDraw=now;updateUI()}
     });
 
-    device.start(selectedMeasurementPeriodMs());
+    device.start(state.samplePeriodMs);
 
     els.connect.textContent='Připojeno';
     els.disconnect.disabled=false;els.pause.disabled=false;els.zero.disabled=false;
@@ -514,6 +544,7 @@ async function connect(){
 
 function reset(status='nepřipojen',type=''){
   state.device=null;state.sensor=null;state.offset=0;state.samples=[];state.paused=false;
+  state.sampleIndex=0;state.samplePeriodMs=selectedMeasurementPeriodMs();
   els.connect.disabled=false;els.connect.textContent='Připojit';
   els.disconnect.disabled=true;els.pause.disabled=true;els.pause.textContent='Pauza';els.zero.disabled=true;
   els.device.textContent='';setStatus(status,type);updateUI();
