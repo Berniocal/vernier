@@ -1,5 +1,5 @@
 // Vernier app cache
-const CACHE_VERSION = 'v27';
+const CACHE_VERSION = 'v28';
 const CACHE_PREFIX = 'gdx-lab-';
 const CACHE_NAME = CACHE_PREFIX + CACHE_VERSION;
 
