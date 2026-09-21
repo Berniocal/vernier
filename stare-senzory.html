@@ -30,6 +30,17 @@ button:disabled{opacity:.42;cursor:not-allowed}
 .controls button{flex:1;min-width:120px}
 .controls label{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:.8rem}
 .controls select{border:1px solid var(--line);border-radius:8px;background:#fff;padding:6px 8px}
+.graph-card{margin-top:10px;background:#fff;border:1px solid var(--line);border-radius:18px;overflow:hidden;box-shadow:0 1px 2px rgba(16,24,40,.04)}
+.graph-toolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:9px 10px;border-bottom:1px solid var(--line)}
+.seg{display:inline-flex;gap:3px;padding:3px;background:#e8edf3;border:1px solid #d6dde7;border-radius:11px}
+.seg button{border:0;background:transparent;color:#475467;border-radius:8px;padding:6px 10px;min-width:0}
+.seg button.active{background:#fff;color:#111827;box-shadow:0 1px 2px rgba(15,23,42,.12)}
+.graph-toolbar label{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:.8rem}
+.graph-toolbar select{border:1px solid var(--line);border-radius:8px;background:#fff;padding:6px 8px}
+.graph-hint{margin-left:auto;color:var(--muted);font-size:.78rem}
+.graph-wrap{position:relative;height:330px}
+.graph-wrap canvas{display:block;width:100%;height:100%}
+.graph-empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:.88rem;pointer-events:none}
 @media(max-width:680px){
   .app{width:calc(100% - 10px);padding:7px 0 18px}
   header{margin-bottom:7px}
@@ -40,6 +51,10 @@ button:disabled{opacity:.42;cursor:not-allowed}
   .controls{padding:6px;gap:4px}
   .controls button{min-width:0;padding:6px 5px;font-size:.76rem}
   .controls label{width:100%;justify-content:center}
+  .graph-toolbar{gap:5px;padding:7px}
+  .graph-toolbar label{font-size:.72rem}
+  .graph-hint{width:100%;margin-left:0}
+  .graph-wrap{height:260px}
 }
 </style>
 </head>
@@ -82,6 +97,28 @@ button:disabled{opacity:.42;cursor:not-allowed}
       </label>
     </div>
   </section>
+
+  <section class="graph-card">
+    <div class="graph-toolbar">
+      <div class="seg" aria-label="Režim grafu">
+        <button id="graphFit" type="button" class="active">Celý záznam</button>
+        <button id="graphScroll" type="button">Posouvání</button>
+      </div>
+      <label>Okno:
+        <select id="graphWindow">
+          <option value="5">5 s</option>
+          <option value="10" selected>10 s</option>
+          <option value="20">20 s</option>
+          <option value="60">60 s</option>
+        </select>
+      </label>
+      <span id="graphHint" class="graph-hint">0 s zůstává vlevo, celý záznam se průběžně zmenšuje.</span>
+    </div>
+    <div id="graphWrap" class="graph-wrap">
+      <canvas id="graph"></canvas>
+      <div id="graphEmpty" class="graph-empty">Graf se začne kreslit po spuštění měření.</div>
+    </div>
+  </section>
 </div>
 
 <script>
@@ -102,11 +139,13 @@ const CMD={
 
 const state={
   device:null,info:null,outReportId:0,pending:new Map(),count:0,offset:0,lastRaw:NaN,lastValue:NaN,
-  measuring:false,sensorId:null,dds:null,readingDDS:false
+  measuring:false,sensorId:null,dds:null,readingDDS:false,
+  graphMode:'fit',graphData:[],sampleTime:0,lastDraw:0
 };
 
 const els={};
-for(const id of ['connect','disconnect','start','stop','zero','period','status','deviceName','deviceMeta','value','unit']) els[id]=document.getElementById(id);
+for(const id of ['connect','disconnect','start','stop','zero','period','status','deviceName','deviceMeta','value','unit','graphFit','graphScroll','graphWindow','graphHint','graphWrap','graph','graphEmpty']) els[id]=document.getElementById(id);
+const graphCtx=els.graph.getContext('2d');
 
 function log(msg){
   const t=new Date().toLocaleTimeString('cs-CZ');
@@ -246,8 +285,172 @@ function physicalValue(raw){
   return calibrateVoltage(rawToVolts(raw),state.dds);
 }
 
+function graphDisplayUnit(){
+  if(state.dds){
+    const u=cleanUnit((state.dds.pages[state.dds.activePage]||state.dds.pages[0]).unit);
+    const map={KPA:'kPa',PA:'Pa',HPA:'hPa',MPA:'MPa',V:'V',MV:'mV',A:'A',MA:'mA',N:'N',C:'°C',F:'°F'};
+    return map[u.toUpperCase()]||u;
+  }
+  return 'RAW';
+}
+
+function graphValueFromRaw(raw){
+  if(state.dds){
+    const v=physicalValue(raw);
+    return Number.isFinite(v)?v:NaN;
+  }
+  return raw;
+}
+
+function setGraphMode(mode){
+  state.graphMode=mode;
+  els.graphFit.classList.toggle('active',mode==='fit');
+  els.graphScroll.classList.toggle('active',mode==='scroll');
+  els.graphWindow.disabled=mode!=='scroll';
+  els.graphHint.textContent=mode==='fit'
+    ? '0 s zůstává vlevo, celý záznam se průběžně zmenšuje.'
+    : 'Graf pokračuje doprava; čas 0 s postupně odjíždí doleva.';
+  drawGraph();
+}
+
+function resizeGraph(){
+  const r=els.graph.getBoundingClientRect();
+  const dpr=Math.min(window.devicePixelRatio||1,2);
+  const w=Math.max(1,Math.round(r.width*dpr));
+  const h=Math.max(1,Math.round(r.height*dpr));
+  if(els.graph.width!==w||els.graph.height!==h){
+    els.graph.width=w;els.graph.height=h;
+  }
+  return {w,h,dpr};
+}
+
+function niceNumber(v){
+  if(!Number.isFinite(v))return '—';
+  const a=Math.abs(v);
+  const d=a>=1000?0:a>=100?1:a>=10?2:3;
+  return v.toLocaleString('cs-CZ',{maximumFractionDigits:d});
+}
+
+function drawGraph(){
+  const {w,h,dpr}=resizeGraph();
+  graphCtx.clearRect(0,0,w,h);
+  graphCtx.fillStyle='#fff';
+  graphCtx.fillRect(0,0,w,h);
+
+  if(!state.graphData.length){
+    els.graphEmpty.style.display='flex';
+    return;
+  }
+  els.graphEmpty.style.display='none';
+
+  const padL=58*dpr,padR=12*dpr,padT=18*dpr,padB=34*dpr;
+  const W=w-padL-padR,H=h-padT-padB;
+  const latest=state.graphData[state.graphData.length-1].t;
+  let xMin=0,xMax=Math.max(latest,1);
+
+  if(state.graphMode==='scroll'){
+    const win=Math.max(1,Number(els.graphWindow.value)||10);
+    xMax=Math.max(win,latest);
+    xMin=Math.max(0,xMax-win);
+  }
+
+  let visible=state.graphData;
+  if(state.graphMode==='scroll'){
+    let first=0;
+    while(first<visible.length && visible[first].t<xMin) first++;
+    visible=visible.slice(Math.max(0,first-1));
+  }
+
+  const ys=[];
+  for(const p of visible){
+    if(p.t>=xMin&&p.t<=xMax&&Number.isFinite(p.y))ys.push(p.y-state.offset);
+  }
+  if(!ys.length)return;
+
+  let yMin=Math.min(...ys),yMax=Math.max(...ys);
+  if(yMin===yMax){
+    const d=Math.max(Math.abs(yMin)*0.02,0.5);
+    yMin-=d;yMax+=d;
+  }else{
+    const p=(yMax-yMin)*0.10;
+    yMin-=p;yMax+=p;
+  }
+
+  const xOf=t=>padL+(t-xMin)/(xMax-xMin)*W;
+  const yOf=v=>padT+(yMax-v)/(yMax-yMin)*H;
+
+  graphCtx.strokeStyle='#e2e8f0';
+  graphCtx.lineWidth=1*dpr;
+  graphCtx.font=(10*dpr)+'px system-ui';
+  graphCtx.fillStyle='#667085';
+  graphCtx.textBaseline='top';
+  graphCtx.textAlign='center';
+
+  for(let i=0;i<=5;i++){
+    const x=padL+W*i/5;
+    graphCtx.beginPath();graphCtx.moveTo(x,padT);graphCtx.lineTo(x,padT+H);graphCtx.stroke();
+    const t=xMin+(xMax-xMin)*i/5;
+    graphCtx.fillText(niceNumber(t)+' s',x,padT+H+8*dpr);
+  }
+
+  graphCtx.textAlign='right';
+  graphCtx.textBaseline='middle';
+  for(let i=0;i<=4;i++){
+    const y=padT+H*i/4;
+    graphCtx.beginPath();graphCtx.moveTo(padL,y);graphCtx.lineTo(padL+W,y);graphCtx.stroke();
+    const v=yMax-(yMax-yMin)*i/4;
+    graphCtx.fillText(niceNumber(v),padL-7*dpr,y);
+  }
+
+  graphCtx.textAlign='left';
+  graphCtx.textBaseline='top';
+  graphCtx.font='700 '+(11*dpr)+'px system-ui';
+  graphCtx.fillStyle='#475467';
+  graphCtx.fillText(graphDisplayUnit(),padL,padT-15*dpr);
+
+  graphCtx.strokeStyle='#2563eb';
+  graphCtx.lineWidth=2*dpr;
+  graphCtx.lineJoin='round';
+  graphCtx.lineCap='round';
+  graphCtx.beginPath();
+
+  const maxPoints=Math.max(300,Math.floor(W/dpr)*2);
+  const step=Math.max(1,Math.ceil(visible.length/maxPoints));
+  let started=false;
+  for(let i=0;i<visible.length;i+=step){
+    const p=visible[i];
+    if(p.t<xMin||p.t>xMax||!Number.isFinite(p.y)){started=false;continue}
+    const x=xOf(p.t),y=yOf(p.y-state.offset);
+    if(!started){graphCtx.moveTo(x,y);started=true}else graphCtx.lineTo(x,y);
+  }
+  const last=visible[visible.length-1];
+  if(last&&last.t>=xMin&&last.t<=xMax&&Number.isFinite(last.y)){
+    const x=xOf(last.t),y=yOf(last.y-state.offset);
+    if(!started)graphCtx.moveTo(x,y);else graphCtx.lineTo(x,y);
+  }
+  graphCtx.stroke();
+
+  graphCtx.strokeStyle='#cbd5e1';
+  graphCtx.lineWidth=1*dpr;
+  graphCtx.strokeRect(padL,padT,W,H);
+}
+
+function scheduleGraphDraw(){
+  const now=performance.now();
+  if(now-state.lastDraw<35)return;
+  state.lastDraw=now;
+  requestAnimationFrame(drawGraph);
+}
+
 function acceptRaw(raw,note=''){
   state.lastRaw=raw;
+  const base=graphValueFromRaw(raw);
+  if(Number.isFinite(base)){
+    state.graphData.push({t:state.sampleTime,y:base});
+    if(state.graphData.length>120000)state.graphData.splice(0,state.graphData.length-120000);
+    state.sampleTime+=Math.max(0.001,Number(els.period.value)/1000);
+    scheduleGraphDraw();
+  }
   state.count++;
 
   if(state.dds){
@@ -255,7 +458,7 @@ function acceptRaw(raw,note=''){
     state.lastValue=value;
     if(Number.isFinite(value)){
       els.value.textContent=formatMeasured(value-state.offset);
-      els.unit.textContent=cleanUnit((state.dds.pages[state.dds.activePage]||state.dds.pages[0]).unit)||'';
+      els.unit.textContent=graphDisplayUnit();
     }else{
       els.value.textContent=String(raw);
       els.unit.textContent='RAW';
@@ -417,7 +620,7 @@ async function configureSmartSensor(dds){
 function showDDS(dds){
   const page=dds.pages[dds.activePage]||dds.pages[0];
   const unit=cleanUnit(page.unit);
-  els.unit.textContent=unit||'RAW';
+  els.unit.textContent=graphDisplayUnit();
   els.deviceMeta.textContent=(dds.longName||dds.shortName||'BTA čidlo')+
     (Number.isFinite(dds.minSamplePeriod)?' · min. '+Math.round(dds.minSamplePeriod*1000)+' ms':'');
   log('DDS: '+(dds.longName||dds.shortName||'bez názvu')+', jednotka '+(unit||'—')+
@@ -492,7 +695,12 @@ async function startMeasurement(){
     await setPeriod();
     await command(CMD.START);
     state.measuring=true;
-    state.count=0;els.value.textContent='—';
+    state.count=0;
+    state.graphData=[];
+    state.sampleTime=0;
+    state.lastDraw=0;
+    els.value.textContent='—';
+    drawGraph();
     els.stop.disabled=false;els.zero.disabled=false;
     setStatus('měřím','ok');
     log('START OK');
@@ -536,6 +744,7 @@ async function connect(){
     state.device=device;
     state.info=PRODUCTS[device.productId]||{name:'Neznámý Vernier',tick:.001,defaultMs:100,kind:'unknown'};
     state.sensorId=null;state.dds=null;state.offset=0;state.lastRaw=NaN;state.lastValue=NaN;
+    state.graphData=[];state.sampleTime=0;
     state.outReportId=findOutReportId(device);
     device.addEventListener('inputreport',onInputReport);
 
@@ -567,10 +776,10 @@ async function disconnect(){
   try{if(state.measuring)await stopMeasurement()}catch(_){}
   try{state.device.removeEventListener('inputreport',onInputReport)}catch(_){}
   try{await state.device.close()}catch(_){}
-  state.device=null;state.info=null;state.pending.clear();state.count=0;state.offset=0;state.lastRaw=NaN;state.lastValue=NaN;state.measuring=false;state.sensorId=null;state.dds=null;state.readingDDS=false;
+  state.device=null;state.info=null;state.pending.clear();state.count=0;state.offset=0;state.lastRaw=NaN;state.lastValue=NaN;state.measuring=false;state.sensorId=null;state.dds=null;state.readingDDS=false;state.graphData=[];state.sampleTime=0;
   els.connect.disabled=false;els.disconnect.disabled=true;els.start.disabled=true;els.stop.disabled=true;els.zero.disabled=true;els.period.disabled=true;
   els.deviceName.textContent='—';els.deviceMeta.textContent='Podporované testovací typy: Go!Link, Go!Temp, Go!Motion.';
-  els.value.textContent='—';els.unit.textContent='RAW';setStatus('nepřipojen');
+  els.value.textContent='—';els.unit.textContent='RAW';setStatus('nepřipojen');drawGraph();
   log('Odpojeno');
 }
 
@@ -578,6 +787,12 @@ els.connect.addEventListener('click',connect);
 els.disconnect.addEventListener('click',disconnect);
 els.start.addEventListener('click',startMeasurement);
 els.stop.addEventListener('click',stopMeasurement);
+els.graphFit.addEventListener('click',()=>setGraphMode('fit'));
+els.graphScroll.addEventListener('click',()=>setGraphMode('scroll'));
+els.graphWindow.addEventListener('change',drawGraph);
+new ResizeObserver(drawGraph).observe(els.graphWrap);
+setGraphMode('fit');
+
 els.zero.addEventListener('click',()=>{
   if(!Number.isFinite(state.lastRaw))return;
   if(state.dds){
@@ -586,10 +801,12 @@ els.zero.addEventListener('click',()=>{
     state.offset=v;
     els.value.textContent='0';
     log('Nula zobrazení nastavena na '+formatMeasured(v)+' '+els.unit.textContent);
+    drawGraph();
   }else{
     state.offset=state.lastRaw;
     els.value.textContent='0';
     log('RAW nula nastavena na '+state.offset);
+    drawGraph();
   }
 });
 })();
