@@ -26,6 +26,10 @@ button:disabled{opacity:.42;cursor:not-allowed}
 .big{display:flex;align-items:baseline;justify-content:center;gap:.18em;min-height:210px;padding:18px}
 .value{font-size:clamp(4.5rem,15vw,8.5rem);line-height:.86;font-weight:800;letter-spacing:-.06em;font-variant-numeric:tabular-nums}
 .unit{font-size:1.4rem;font-weight:750;color:var(--muted)}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);border-top:1px solid var(--line)}
+.stat{background:#fff;padding:10px 12px;text-align:center}
+.stat-label{display:block;color:var(--muted);font-size:.72rem;margin-bottom:2px}
+.stat-value{font-size:1.05rem;font-weight:800;font-variant-numeric:tabular-nums}
 .controls{display:flex;gap:7px;align-items:center;flex-wrap:wrap;padding:10px;border-top:1px solid var(--line)}
 .controls button{flex:1;min-width:120px}
 .controls label{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:.8rem}
@@ -48,6 +52,8 @@ button:disabled{opacity:.42;cursor:not-allowed}
   header button{padding:6px 8px;font-size:.74rem}
   .big{min-height:175px;padding:12px}
   .value{font-size:clamp(4rem,22vw,6.5rem)}
+  .stat{padding:8px 5px}
+  .stat-value{font-size:.92rem}
   .controls{padding:6px;gap:4px}
   .controls button{min-width:0;padding:6px 5px;font-size:.76rem}
   .controls label{width:100%;justify-content:center}
@@ -81,11 +87,26 @@ button:disabled{opacity:.42;cursor:not-allowed}
       <span id="unit" class="unit">RAW</span>
     </div>
 
+    <div class="stats">
+      <div class="stat"><span class="stat-label">Průměr</span><span id="avgValue" class="stat-value">—</span></div>
+      <div class="stat"><span class="stat-label">Minimum</span><span id="minValue" class="stat-value">—</span></div>
+      <div class="stat"><span class="stat-label">Maximum</span><span id="maxValue" class="stat-value">—</span></div>
+    </div>
+
     <div class="controls">
       <button id="start" disabled>Start měření</button>
       <button id="stop" disabled>Stop</button>
       <button id="zero" disabled>Vynulovat</button>
       <button id="disconnect" disabled>Odpojit</button>
+      <label>Desetinná místa:
+        <select id="decimals">
+          <option value="0">0</option>
+          <option value="1">1</option>
+          <option value="2" selected>2</option>
+          <option value="3">3</option>
+          <option value="4">4</option>
+        </select>
+      </label>
       <label>Perioda:
         <select id="period" disabled>
           <option value="40">40 ms</option>
@@ -144,7 +165,7 @@ const state={
 };
 
 const els={};
-for(const id of ['connect','disconnect','start','stop','zero','period','status','deviceName','deviceMeta','value','unit','graphFit','graphScroll','graphWindow','graphHint','graphWrap','graph','graphEmpty']) els[id]=document.getElementById(id);
+for(const id of ['connect','disconnect','start','stop','zero','period','decimals','avgValue','minValue','maxValue','status','deviceName','deviceMeta','value','unit','graphFit','graphScroll','graphWindow','graphHint','graphWrap','graph','graphEmpty']) els[id]=document.getElementById(id);
 const graphCtx=els.graph.getContext('2d');
 
 function log(msg){
@@ -232,11 +253,50 @@ function cleanUnit(unit){
   return u || '';
 }
 
+function selectedDecimals(){
+  const d=Number(els.decimals?.value);
+  return Number.isInteger(d)?Math.max(0,Math.min(4,d)):2;
+}
+
 function formatMeasured(v){
   if(!Number.isFinite(v))return '—';
-  const a=Math.abs(v);
-  const digits=a>=1000?1:a>=100?2:a>=10?3:4;
-  return v.toLocaleString('cs-CZ',{maximumFractionDigits:digits,minimumFractionDigits:0});
+  const d=selectedDecimals();
+  return v.toLocaleString('cs-CZ',{minimumFractionDigits:d,maximumFractionDigits:d});
+}
+
+function updateStats(){
+  if(!state.graphData.length){
+    els.avgValue.textContent='—';
+    els.minValue.textContent='—';
+    els.maxValue.textContent='—';
+    return;
+  }
+  let sum=0,min=Infinity,max=-Infinity,n=0;
+  for(const p of state.graphData){
+    if(!Number.isFinite(p.y))continue;
+    const v=p.y-state.offset;
+    sum+=v;n++;
+    if(v<min)min=v;
+    if(v>max)max=v;
+  }
+  const unit=graphDisplayUnit();
+  els.avgValue.textContent=n?formatMeasured(sum/n)+' '+unit:'—';
+  els.minValue.textContent=n?formatMeasured(min)+' '+unit:'—';
+  els.maxValue.textContent=n?formatMeasured(max)+' '+unit:'—';
+}
+
+function refreshDisplayedCurrent(){
+  if(!Number.isFinite(state.lastRaw))return;
+  if(state.dds){
+    const v=physicalValue(state.lastRaw);
+    if(Number.isFinite(v)){
+      els.value.textContent=formatMeasured(v-state.offset);
+      els.unit.textContent=graphDisplayUnit();
+    }
+  }else{
+    els.value.textContent=formatMeasured(state.lastRaw-state.offset);
+    els.unit.textContent='RAW';
+  }
 }
 
 function rawToVolts(raw){
@@ -399,7 +459,7 @@ function drawGraph(){
     const y=padT+H*i/4;
     graphCtx.beginPath();graphCtx.moveTo(padL,y);graphCtx.lineTo(padL+W,y);graphCtx.stroke();
     const v=yMax-(yMax-yMin)*i/4;
-    graphCtx.fillText(niceNumber(v),padL-7*dpr,y);
+    graphCtx.fillText(formatMeasured(v),padL-7*dpr,y);
   }
 
   graphCtx.textAlign='left';
@@ -450,6 +510,7 @@ function acceptRaw(raw,note=''){
     if(state.graphData.length>120000)state.graphData.splice(0,state.graphData.length-120000);
     state.sampleTime+=Math.max(0.001,Number(els.period.value)/1000);
     scheduleGraphDraw();
+    updateStats();
   }
   state.count++;
 
@@ -465,7 +526,7 @@ function acceptRaw(raw,note=''){
     }
   }else{
     state.lastValue=raw;
-    els.value.textContent=String(raw-state.offset);
+    els.value.textContent=formatMeasured(raw-state.offset);
     els.unit.textContent='RAW';
   }
 
@@ -700,6 +761,7 @@ async function startMeasurement(){
     state.sampleTime=0;
     state.lastDraw=0;
     els.value.textContent='—';
+    updateStats();
     drawGraph();
     els.stop.disabled=false;els.zero.disabled=false;
     setStatus('měřím','ok');
@@ -779,7 +841,7 @@ async function disconnect(){
   state.device=null;state.info=null;state.pending.clear();state.count=0;state.offset=0;state.lastRaw=NaN;state.lastValue=NaN;state.measuring=false;state.sensorId=null;state.dds=null;state.readingDDS=false;state.graphData=[];state.sampleTime=0;
   els.connect.disabled=false;els.disconnect.disabled=true;els.start.disabled=true;els.stop.disabled=true;els.zero.disabled=true;els.period.disabled=true;
   els.deviceName.textContent='—';els.deviceMeta.textContent='Podporované testovací typy: Go!Link, Go!Temp, Go!Motion.';
-  els.value.textContent='—';els.unit.textContent='RAW';setStatus('nepřipojen');drawGraph();
+  els.value.textContent='—';els.unit.textContent='RAW';setStatus('nepřipojen');updateStats();drawGraph();
   log('Odpojeno');
 }
 
@@ -790,6 +852,11 @@ els.stop.addEventListener('click',stopMeasurement);
 els.graphFit.addEventListener('click',()=>setGraphMode('fit'));
 els.graphScroll.addEventListener('click',()=>setGraphMode('scroll'));
 els.graphWindow.addEventListener('change',drawGraph);
+els.decimals.addEventListener('change',()=>{
+  refreshDisplayedCurrent();
+  updateStats();
+  drawGraph();
+});
 new ResizeObserver(drawGraph).observe(els.graphWrap);
 setGraphMode('fit');
 
@@ -801,11 +868,13 @@ els.zero.addEventListener('click',()=>{
     state.offset=v;
     els.value.textContent='0';
     log('Nula zobrazení nastavena na '+formatMeasured(v)+' '+els.unit.textContent);
+    updateStats();
     drawGraph();
   }else{
     state.offset=state.lastRaw;
     els.value.textContent='0';
     log('RAW nula nastavena na '+state.offset);
+    updateStats();
     drawGraph();
   }
 });
