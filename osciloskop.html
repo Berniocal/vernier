@@ -51,7 +51,7 @@ canvas{display:block;width:100%;height:100%}
 .metric-main .label{color:var(--muted);font-size:.8rem}
 .metric-main .number{font-size:clamp(2.7rem,5vw,4.4rem);font-weight:800;letter-spacing:-.05em;line-height:1.05;font-variant-numeric:tabular-nums}
 .metric-main .unit{font-size:1.35rem;font-weight:750;color:#475467;margin-left:.1em}
-.metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+.metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
 .metric{border:1px solid var(--line);border-radius:11px;padding:9px;min-width:0}
 .metric .label{color:var(--muted);font-size:.72rem}
 .metric .val{font-size:1.22rem;font-weight:780;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums}
@@ -66,7 +66,7 @@ canvas{display:block;width:100%;height:100%}
   .layout{grid-template-columns:1fr}
   .side-card{display:block}
   .metric-main{margin-bottom:7px}
-  .metrics{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .metrics{grid-template-columns:repeat(3,minmax(0,1fr))}
   .side-controls{margin-top:7px}
 }
 @media(max-width:680px){
@@ -195,16 +195,9 @@ canvas{display:block;width:100%;height:100%}
 
       <div class="metrics">
         <div class="metric"><div class="label">Amplituda</div><div class="val"><span id="amp">—</span><span class="u"> V</span></div></div>
-        <div class="metric"><div class="label">U<sub>pp</sub></div><div class="val"><span id="pp">—</span><span class="u"> V</span></div></div>
-        <div class="metric"><div class="label">U<sub>max</sub></div><div class="val"><span id="max">—</span><span class="u"> V</span></div></div>
-        <div class="metric"><div class="label">U<sub>min</sub></div><div class="val"><span id="min">—</span><span class="u"> V</span></div></div>
         <div class="metric"><div class="label">Frekvence</div><div class="val"><span id="freq">—</span><span class="u"> Hz</span></div></div>
         <div class="metric"><div class="label">Perioda</div><div class="val"><span id="periodOut">—</span><span class="u"> ms</span></div></div>
-        <div class="metric"><div class="label">DC složka</div><div class="val"><span id="dc">—</span><span class="u"> V</span></div></div>
-        <div class="metric"><div class="label">AC RMS</div><div class="val"><span id="acrms">—</span><span class="u"> V</span></div></div>
       </div>
-
-      <div class="note">RMS je počítáno přímo ze vzorků v zobrazeném časovém okně. Frekvence se určuje z průchodů signálu přes jeho střední hodnotu. Čas vzorků vychází z nastavené periody měření, ne z okamžiku doručení USB/Bluetooth paketu.</div>
     </aside>
   </div>
 
@@ -236,13 +229,8 @@ const els={
   empty:document.querySelector('#empty'),
   rms:document.querySelector('#rms'),
   amp:document.querySelector('#amp'),
-  pp:document.querySelector('#pp'),
-  max:document.querySelector('#max'),
-  min:document.querySelector('#min'),
   freq:document.querySelector('#freq'),
   periodOut:document.querySelector('#periodOut'),
-  dc:document.querySelector('#dc'),
-  acrms:document.querySelector('#acrms'),
   triggerState:document.querySelector('#triggerState')
 };
 
@@ -386,16 +374,11 @@ function analyse(data){
 function updateMetrics(){
   const a=analyse(currentWindow());
   if(!a){
-    ['rms','amp','pp','max','min','freq','periodOut','dc','acrms'].forEach(k=>els[k].textContent='—');
+    ['rms','amp','freq','periodOut'].forEach(k=>els[k].textContent='—');
     return;
   }
   els.rms.textContent=fmt(a.rms,a.rms<1?3:2);
   els.amp.textContent=fmt(a.amp,a.amp<1?3:2);
-  els.pp.textContent=fmt(a.pp,a.pp<1?3:2);
-  els.max.textContent=fmt(a.max,a.max<1?3:2);
-  els.min.textContent=fmt(a.min,Math.abs(a.min)<1?3:2);
-  els.dc.textContent=fmt(a.dc,Math.abs(a.dc)<1?3:2);
-  els.acrms.textContent=fmt(a.acrms,a.acrms<1?3:2);
   els.freq.textContent=Number.isFinite(a.freq)?fmt(a.freq,a.freq<10?2:1):'—';
   els.periodOut.textContent=Number.isFinite(a.freq)?fmt(1000/a.freq,(1000/a.freq)<10?2:1):'—';
 }
