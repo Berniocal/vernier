@@ -1,5 +1,5 @@
 // Vernier app cache
-const CACHE_VERSION = 'v28';
+const CACHE_VERSION = 'v29';
 const CACHE_PREFIX = 'gdx-lab-';
 const CACHE_NAME = CACHE_PREFIX + CACHE_VERSION;
 
@@ -11,6 +11,7 @@ const ASSETS = [
   './hydrostaticky-tlak.html',
   './osciloskop.html',
   './osciloskop-30v.html',
+  './multiosciloskop-ui.html',
   './proudovy-osciloskop.html',
   './pohyb-kmitani.html',
   './stare-senzory.html',
