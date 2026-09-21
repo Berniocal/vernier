@@ -130,7 +130,7 @@ const LOCK={COMMAND:0x58,RESPONSE:0x98,RESPONSE_INIT:0xB8,MEASUREMENT:0x20};
 const INIT_PAYLOAD=[0xA5,0x4A,0x06,0x49,0x07,0x48,0x08,0x47,0x09,0x46,0x0A,0x45,0x0B,0x44,0x0C,0x43,0x0D,0x42,0x0E,0x41];
 
 const state={usb:null,interfaceNumber:0,inEndpoint:0,outEndpoint:0,reading:false,counter:0,pending:new Map(),
-  voltageCh:null,currentCh:null,currentDDS:null,measuring:false,paused:false,rate:1000,u:[],i:[],uIndex:0,iIndex:0,
+  voltageCh:null,currentCh:null,currentDDS:null,currentPM10:false,measuring:false,paused:false,rate:1000,u:[],i:[],uIndex:0,iIndex:0,
   iOffset:0,maxSamples:120000,lastDraw:0,unknown:0,lastUnknown:'',interleavePhase:0};
 
 const $=id=>document.getElementById(id);
@@ -202,7 +202,7 @@ function currentCalibration(){
 }
 function rawToInputVolts(raw,pm10){return pm10?raw*(20/4095)-10:raw*(5/4095)}
 function voltageValue(raw){return 3.206*rawToInputVolts(raw,true)}
-function currentValue(raw){const c=currentCalibration();return c.a+c.b*rawToInputVolts(raw,false)-state.iOffset}
+function currentValue(raw){const c=currentCalibration();return c.a+c.b*rawToInputVolts(raw,state.currentPM10)-state.iOffset}
 function plausible(v){return Number.isFinite(v)&&v>=0&&v<=4095}
 
 function decodeTagged(body){
@@ -318,6 +318,7 @@ async function identifySensors(){
   try{state.currentDDS=await readDDS(current.ch)}catch(e){console.warn('DDS HCS-BTA:',e)}
   ack(await send(CMD.SET_ANALOG_INPUT,[volt.ch,4]),'Nastavení Voltage Probe 30V');
   const currentInput=state.currentDDS?.operationType===2?4:0;
+  state.currentPM10=currentInput===4;
   ack(await send(CMD.SET_ANALOG_INPUT,[current.ch,currentInput]),'Nastavení HCS-BTA');
   ack(await send(CMD.SET_SAMPLING_MODE,[volt.ch,0]),'Vzorkování napětí');
   ack(await send(CMD.SET_SAMPLING_MODE,[current.ch,0]),'Vzorkování proudu');
@@ -364,7 +365,7 @@ async function disconnect(silent=false){
     state.reading=false;for(const p of state.pending.values()){clearTimeout(p.timer);p.reject?.(new Error('Odpojeno'))}state.pending.clear();
     try{await d.releaseInterface(state.interfaceNumber)}catch(_){}try{await d.close()}catch(_){}
   }
-  state.usb=null;state.reading=false;state.measuring=false;state.voltageCh=null;state.currentCh=null;state.u=[];state.i=[];state.uIndex=0;state.iIndex=0;state.paused=false;
+  state.usb=null;state.reading=false;state.measuring=false;state.voltageCh=null;state.currentCh=null;state.currentPM10=false;state.u=[];state.i=[];state.uIndex=0;state.iIndex=0;state.paused=false;
   els.connect.disabled=false;els.connect.textContent='Připojit';els.disconnect.disabled=true;els.pause.disabled=true;els.pause.textContent='Pauza';els.zeroI.disabled=true;els.device.textContent='';
   if(!silent)setStatus('nepřipojen');update();
 }
