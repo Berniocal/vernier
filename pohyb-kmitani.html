@@ -167,7 +167,7 @@ canvas{display:block;width:100%;height:100%}
     </div>
   </section>
 
-  <div class="note">Živá data: posledních 2/5/10 s se plynule posouvá doleva. Osciloskop: pevný sweep stejné délky, automaticky synchronizovaný průchodem x = 0 směrem nahoru. Rychlost a zrychlení se určují lokálním kvadratickým fitem, aby se omezil šum při derivování.</div>
+  <div class="note">Živá data: posledních 2/5/10 s se plynule posouvá doleva. Osciloskop: pevný sweep stejné délky, automaticky synchronizovaný průchodem x = 0 směrem nahoru. Časová osa vychází z nastavené frekvence snímání, ne z okamžiku doručení USB/Bluetooth paketu. Rychlost a zrychlení se určují lokálním kvadratickým fitem.</div>
 </div>
 
 <script>
@@ -176,7 +176,7 @@ canvas{display:block;width:100%;height:100%}
 
 const state={
   device:null,sensor:null,running:false,samples:[],zero:null,
-  mode:'live',view:'x',periodMs:50,lastAcceptedAt:null,lastPosition:null,
+  mode:'live',view:'x',periodMs:50,sampleTime:0,lastPosition:null,
   lastDraw:0,rejected:0
 };
 
@@ -230,16 +230,21 @@ function currentX(pos){
 }
 
 function acceptSample(pos){
-  const now=performance.now()/1000;
+  // Go Direct může poslat více vzorků v jednom USB/BLE paketu. Callbacky pak
+  // přijdou téměř ve stejný okamžik, takže performance.now() zkresluje osu času.
+  // Čas každého bodu proto vychází přímo z nastavené periody snímání.
+  const t=state.sampleTime;
+  state.sampleTime+=state.periodMs/1000;
+
   if(pos<0.25 || pos>2.0){
     setStatus('objekt mimo rozsah','warn');
     state.rejected++;
     return;
   }
 
-  if(Number.isFinite(state.lastPosition) && state.lastAcceptedAt!==null){
-    const dt=now-state.lastAcceptedAt;
-    if(dt>0 && dt<0.25 && Math.abs(pos-state.lastPosition)>0.30){
+  if(Number.isFinite(state.lastPosition)){
+    const dt=state.periodMs/1000;
+    if(dt<0.25 && Math.abs(pos-state.lastPosition)>0.30){
       setStatus('odmítnut chybný odraz','warn');
       state.rejected++;
       return;
@@ -248,21 +253,12 @@ function acceptSample(pos){
 
   if(!Number.isFinite(state.zero))state.zero=pos;
 
-  const t=state.samples.length
-    ? state.samples[state.samples.length-1].t+(state.lastAcceptedAt===null?0:(now-state.lastAcceptedAt))
-    : 0;
   state.samples.push({t,pos,x:currentX(pos)});
   if(state.samples.length>12000)state.samples.splice(0,state.samples.length-12000);
 
-  state.lastAcceptedAt=now;
   state.lastPosition=pos;
   setStatus('objekt nalezen','ok');
-
-  if(state.samples.length>2){
-    const n=state.samples.length;
-    const dt=(state.samples[n-1].t-state.samples[Math.max(0,n-21)].t)/Math.min(20,n-1);
-    if(dt>0)els.sampleInfo.textContent='≈ '+fmt(1/dt,1)+' Hz';
-  }
+  els.sampleInfo.textContent=fmt(1000/state.periodMs,1)+' Hz';
 
   const drawNow=performance.now();
   if(drawNow-state.lastDraw>45){
@@ -527,7 +523,7 @@ async function connect(){
     state.sensor=sensor;
     state.samples=[];
     state.zero=null;
-    state.lastAcceptedAt=null;
+    state.sampleTime=0;
     state.lastPosition=null;
     state.rejected=0;
     state.periodMs=selectedPeriodMs();
@@ -567,7 +563,6 @@ async function applySampleRate(){
 
   try{
     if(typeof state.device.stop==='function')await state.device.stop();
-    state.lastAcceptedAt=null;
     state.lastPosition=null;
     if(typeof state.device.start==='function')await state.device.start(state.periodMs);
     setStatus('snímání '+els.sampleRate.value+' Hz','ok');
@@ -581,10 +576,12 @@ async function start(){
   if(!state.device||!state.sensor)return;
   try{
     state.running=true;
-    state.lastAcceptedAt=null;
     state.lastPosition=null;
     state.periodMs=selectedPeriodMs();
-    if(!state.samples.length)state.zero=null;
+    if(!state.samples.length){
+      state.zero=null;
+      state.sampleTime=0;
+    }
     if(typeof state.device.start==='function')await state.device.start(state.periodMs);
     els.start.disabled=true;els.stop.disabled=false;
     setStatus('čekám na objekt…');
@@ -612,7 +609,7 @@ async function disconnect(){
 
 function reset(status='nepřipojen',type=''){
   state.device=null;state.sensor=null;state.running=false;state.samples=[];state.zero=null;
-  state.lastAcceptedAt=null;state.lastPosition=null;
+  state.sampleTime=0;state.lastPosition=null;
   els.connect.disabled=false;els.connect.textContent='Připojit';
   els.disconnect.disabled=true;els.start.disabled=true;els.stop.disabled=true;els.zero.disabled=true;els.clear.disabled=true;
   els.deviceName.textContent='—';els.sampleInfo.textContent='—';els.triggerInfo.textContent=state.mode==='live'?'živý posuv':'čekám na trigger';
@@ -630,7 +627,7 @@ function setZero(){
 }
 
 function clearData(){
-  state.samples=[];state.lastAcceptedAt=null;state.lastPosition=null;
+  state.samples=[];state.sampleTime=0;state.lastPosition=null;
   els.sampleInfo.textContent='—';
   draw();
 }
