@@ -72,13 +72,13 @@ button:disabled{opacity:.42;cursor:not-allowed}
 
     <div class="big">
       <span id="value" class="value">—</span>
-      <span class="unit">RAW</span>
+      <span id="unit" class="unit">RAW</span>
     </div>
 
     <div class="controls">
       <button id="start" disabled>Start měření</button>
       <button id="stop" disabled>Stop</button>
-      <button id="zero" disabled>Vynulovat RAW</button>
+      <button id="zero" disabled>Vynulovat</button>
       <button id="disconnect" disabled>Odpojit</button>
       <label>Perioda:
         <select id="period" disabled>
@@ -99,6 +99,10 @@ button:disabled{opacity:.42;cursor:not-allowed}
       <div class="row"><span>Product ID</span><span id="pid">—</span></div>
       <div class="row"><span>Typ</span><span id="type">—</span></div>
       <div class="row"><span>Sensor ID</span><span id="sensorId">—</span></div>
+      <div class="row"><span>Čidlo</span><span id="sensorName">—</span></div>
+      <div class="row"><span>Jednotka</span><span id="sensorUnit">—</span></div>
+      <div class="row"><span>Kalibrace</span><span id="calibration">—</span></div>
+      <div class="row"><span>DDS paměť</span><span id="ddsStatus">—</span></div>
       <div class="row"><span>Report ID OUT</span><span id="outReport">—</span></div>
       <div class="row"><span>Počet vzorků</span><span id="count">0</span></div>
     </section>
@@ -109,7 +113,7 @@ button:disabled{opacity:.42;cursor:not-allowed}
     </section>
   </div>
 
-  <div class="note"><b>Experimentální verze:</b> zatím zobrazuje syrové hodnoty RAW. Cílem této stránky je nejdřív ověřit komunikaci s vašimi staršími kusy. Po úspěšném testu doplníme Auto-ID, kalibrace a fyzikální jednotky pro konkrétní BTA senzory.</div>
+  <div class="note"><b>Experimentální verze:</b> u chytrých BTA čidel (Sensor ID ≥ 20) aplikace načte přímo z čidla jeho 128bajtový DDS záznam, název, jednotku a kalibraci. Pokud se DDS nepodaří přečíst nebo jde o starší nechytré čidlo, zůstane zobrazení v RAW.</div>
 </div>
 
 <script>
@@ -124,15 +128,17 @@ const PRODUCTS={
 };
 
 const CMD={
-  START:0x18,STOP:0x19,INIT:0x1A,SET_PERIOD:0x1B,GET_PERIOD:0x1C,GET_SENSOR_ID:0x28
+  START:0x18,STOP:0x19,INIT:0x1A,SET_PERIOD:0x1B,GET_PERIOD:0x1C,
+  READ_REMOTE:0x27,GET_SENSOR_ID:0x28,SET_ANALOG_INPUT_CHANNEL:0x29
 };
 
 const state={
-  device:null,info:null,outReportId:0,pending:new Map(),count:0,offset:0,lastRaw:NaN,measuring:false
+  device:null,info:null,outReportId:0,pending:new Map(),count:0,offset:0,lastRaw:NaN,lastValue:NaN,
+  measuring:false,sensorId:null,dds:null,readingDDS:false
 };
 
 const els={};
-for(const id of ['connect','disconnect','start','stop','zero','period','status','deviceName','deviceMeta','value','vid','pid','type','sensorId','outReport','count','log']) els[id]=document.getElementById(id);
+for(const id of ['connect','disconnect','start','stop','zero','period','status','deviceName','deviceMeta','value','unit','vid','pid','type','sensorId','sensorName','sensorUnit','calibration','ddsStatus','outReport','count','log']) els[id]=document.getElementById(id);
 
 function log(msg){
   const t=new Date().toLocaleTimeString('cs-CZ');
@@ -183,7 +189,9 @@ function onInputReport(event){
 
   const packetType=b[0]&0xC0;
   if(packetType!==0){
-    log('RESP '+Array.from(b).map(x=>x.toString(16).padStart(2,'0')).join(' '));
+    if(!(state.readingDDS && b[1]===CMD.READ_REMOTE)){
+      log('RESP '+Array.from(b).map(x=>x.toString(16).padStart(2,'0')).join(' '));
+    }
     resolveResponse(b);
     return;
   }
@@ -212,11 +220,86 @@ function onInputReport(event){
   }
 }
 
+function cleanUnit(unit){
+  const u=String(unit||'').replace(/\0/g,'').trim();
+  if(/^\(.+\)$/.test(u))return u.slice(1,-1);
+  return u || '';
+}
+
+function formatMeasured(v){
+  if(!Number.isFinite(v))return '—';
+  const a=Math.abs(v);
+  const digits=a>=1000?1:a>=100?2:a>=10?3:4;
+  return v.toLocaleString('cs-CZ',{maximumFractionDigits:digits,minimumFractionDigits:0});
+}
+
+function rawToVolts(raw){
+  if(state.dds?.operationType===2){
+    return (10/32768)*raw;
+  }
+  return (2.5/32768)*raw+2.5;
+}
+
+function calibrateVoltage(x,dds=state.dds){
+  if(!dds)return NaN;
+  const p=dds.pages[dds.activePage]||dds.pages[0];
+  const a=p.a,b=p.b,cc=p.c;
+  let y=NaN;
+
+  switch(dds.equation){
+    case 0: y=x; break;
+    case 1: y=b*x+a; break;
+    case 2: y=cc*x*x+b*x+a; break;
+    case 3: y=a*Math.pow(x,b); break;
+    case 4: y=a*Math.pow(b,x); break;
+    case 5: y=a+b*Math.log(x); break;
+    case 6: y=a+b*Math.log(1/x); break;
+    case 7: y=a*Math.exp(b*x); break;
+    case 8: y=a*Math.exp(b/x); break;
+    case 9: y=a*Math.pow(x,b*x); break;
+    case 10:y=a*Math.pow(x,b/x); break;
+    case 11:y=1/(a+b*Math.log(cc*x)); break;
+    case 12:{
+      const maxV=5,resistance=15000;
+      const vx=Math.min(.999*maxV,Math.max(.001*maxV,x));
+      const r=(vx*resistance)/(maxV-vx);
+      y=1/(a+b*Math.log(r)+cc*Math.pow(Math.log(r),3));
+      const u=cleanUnit(p.unit).toUpperCase();
+      if(u==='C')y-=273.15;
+      else if(u==='F')y=(y-273.15)*9/5+32;
+      break;
+    }
+    default:y=NaN;
+  }
+  return Number.isFinite(y)?y:NaN;
+}
+
+function physicalValue(raw){
+  if(!state.dds)return NaN;
+  return calibrateVoltage(rawToVolts(raw),state.dds);
+}
+
 function acceptRaw(raw,note=''){
   state.lastRaw=raw;
   state.count++;
   els.count.textContent=String(state.count);
-  els.value.textContent=String(raw-state.offset);
+
+  if(state.dds){
+    const value=physicalValue(raw);
+    state.lastValue=value;
+    if(Number.isFinite(value)){
+      els.value.textContent=formatMeasured(value-state.offset);
+      els.unit.textContent=cleanUnit((state.dds.pages[state.dds.activePage]||state.dds.pages[0]).unit)||'';
+    }else{
+      els.value.textContent=String(raw);
+      els.unit.textContent='RAW';
+    }
+  }else{
+    state.lastValue=raw;
+    els.value.textContent=String(raw-state.offset);
+    els.unit.textContent='RAW';
+  }
+
   if(note&&state.count<4)log(`MEAS raw=${raw} (${note})`);
 }
 
@@ -246,6 +329,139 @@ async function command(cmd,params=[],timeout=1800){
   return wait;
 }
 
+function ascii(bytes,offset,length){
+  let s='';
+  for(let i=0;i<length;i++){
+    const b=bytes[offset+i];
+    if(!b)break;
+    if(b>=32&&b<=126)s+=String.fromCharCode(b);
+  }
+  return s.trim();
+}
+
+function bitReverse8(x){
+  let y=0;
+  for(let i=0;i<8;i++){y=(y<<1)|(x&1);x>>=1}
+  return y&255;
+}
+
+function verifyDDS(bytes){
+  let xor=0;
+  for(let i=0;i<127;i++)xor^=bytes[i];
+  const stored=bytes[127];
+  const exact=xor===stored;
+  const legacy=((~xor)&255)===stored || bitReverse8(xor)===stored;
+  const allSame=bytes.every(b=>b===bytes[0]);
+  const bcdYear=((bytes[5]>>4)<=9)&&((bytes[5]&15)<=9);
+  const bcdWeek=((bytes[6]>>4)<=5)&&((bytes[6]&15)<=9);
+  return {ok:!allSame&&(exact||legacy||(bcdYear&&bcdWeek)),exact,xor,stored};
+}
+
+function parseDDS(bytes){
+  if(bytes.length!==128)throw new Error('DDS záznam nemá 128 bajtů.');
+  const dv=new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength);
+  const pages=[];
+  for(let i=0;i<3;i++){
+    const o=70+i*19;
+    pages.push({
+      a:dv.getFloat32(o,true),
+      b:dv.getFloat32(o+4,true),
+      c:dv.getFloat32(o+8,true),
+      unit:ascii(bytes,o+12,7)
+    });
+  }
+  return {
+    memMapVersion:bytes[0],
+    sensorNumber:bytes[1],
+    serial:bytes[2]|(bytes[3]<<8)|(bytes[4]<<16),
+    manufacturer:bytes[7],
+    longName:ascii(bytes,8,20),
+    shortName:ascii(bytes,28,12),
+    minSamplePeriod:dv.getFloat32(44,true),
+    typSamplePeriod:dv.getFloat32(48,true),
+    typSamples:dv.getUint16(52,true),
+    warmup:dv.getUint16(54,true),
+    operationType:bytes[57],
+    equation:dv.getInt8(58),
+    ymin:dv.getFloat32(59,true),
+    ymax:dv.getFloat32(63,true),
+    highestPage:bytes[68],
+    activePage:Math.min(bytes[69],2),
+    pages,
+    checksum:verifyDDS(bytes)
+  };
+}
+
+function equationName(n){
+  return ({
+    0:'bez kalibrace',1:'lineární',2:'kvadratická',3:'mocninná',4:'modifikovaná mocninná',
+    5:'logaritmická',6:'modifikovaná logaritmická',7:'exponenciální',8:'modifikovaná exponenciální',
+    9:'geometrická',10:'modifikovaná geometrická',11:'reciproční log',12:'Steinhart–Hart'
+  })[n]||('typ '+n);
+}
+
+async function readRemoteDDS(){
+  const bytes=new Uint8Array(128);
+  state.readingDDS=true;
+  try{
+    log('Čtu DDS paměť čidla (128 B)…');
+    for(let addr=0;addr<128;addr+=6){
+      const count=Math.min(6,128-addr);
+      const r=await command(CMD.READ_REMOTE,[addr,count],2500);
+      if((r[0]&0x20)!==0){
+        throw new Error('Go!Link vrátil chybu při čtení DDS na adrese '+addr+'.');
+      }
+      const valid=r[0]&0x07;
+      const payloadCount=Math.max(0,valid-1);
+      if(payloadCount<count){
+        throw new Error('Neúplná DDS odpověď na adrese '+addr+' ('+payloadCount+'/'+count+' B).');
+      }
+      bytes.set(r.slice(2,2+count),addr);
+    }
+  }finally{
+    state.readingDDS=false;
+  }
+
+  const dds=parseDDS(bytes);
+  if(!dds.checksum.ok)throw new Error('DDS kontrolní součet nesouhlasí.');
+  if(dds.highestPage>2||dds.activePage>dds.highestPage){
+    throw new Error('DDS obsahuje neplatný index kalibrační stránky.');
+  }
+  return dds;
+}
+
+async function configureSmartSensor(dds){
+  const channel=dds.operationType===2 ? 1 : 2;
+  await command(CMD.SET_ANALOG_INPUT_CHANNEL,[channel]);
+  log('Analogový vstup: '+(channel===1?'±10 V':'0–5 V'));
+
+  const minMs=Math.max(1,Math.ceil(dds.minSamplePeriod*1000));
+  let selected=Number(els.period.value);
+  if(selected<minMs){
+    if(![...els.period.options].some(o=>Number(o.value)===minMs)){
+      const o=document.createElement('option');
+      o.value=String(minMs);o.textContent=minMs+' ms (minimum čidla)';
+      els.period.prepend(o);
+    }
+    els.period.value=String(minMs);
+    log('Perioda upravena na minimum čidla: '+minMs+' ms');
+  }
+}
+
+function showDDS(dds){
+  const page=dds.pages[dds.activePage]||dds.pages[0];
+  const unit=cleanUnit(page.unit);
+  els.sensorName.textContent=dds.longName||dds.shortName||('Sensor '+dds.sensorNumber);
+  els.sensorUnit.textContent=unit||'—';
+  els.calibration.textContent=equationName(dds.equation);
+  els.ddsStatus.textContent=(dds.checksum.exact?'OK':'OK (legacy checksum)')+' · v'+dds.memMapVersion;
+  els.unit.textContent=unit||'RAW';
+  els.deviceMeta.textContent=(dds.longName||dds.shortName||'BTA čidlo')+
+    (Number.isFinite(dds.minSamplePeriod)?' · min. '+Math.round(dds.minSamplePeriod*1000)+' ms':'');
+  log('DDS: '+(dds.longName||dds.shortName||'bez názvu')+', jednotka '+(unit||'—')+
+      ', kalibrace '+equationName(dds.equation)+', stránka '+dds.activePage);
+}
+
 async function initDevice(){
   log('INIT '+hex(CMD.INIT,2));
   try{
@@ -255,14 +471,39 @@ async function initDevice(){
     log('INIT: '+e.message+' — pokračuji v testu.');
   }
 
+  state.sensorId=null;
+  state.dds=null;
+  els.sensorName.textContent='—';
+  els.sensorUnit.textContent='—';
+  els.calibration.textContent='—';
+  els.ddsStatus.textContent='—';
+  els.unit.textContent='RAW';
+
   if(state.info.kind==='link'){
     try{
       const r=await command(CMD.GET_SENSOR_ID);
       if(r.length>=6){
         const dv=new DataView(r.buffer,r.byteOffset,r.byteLength);
         const id=dv.getUint32(2,true);
+        state.sensorId=id;
         els.sensorId.textContent=String(id)+' ('+hex(id,8)+')';
         log('Sensor ID: '+id);
+
+        if(id>=20 && id<=255){
+          try{
+            const dds=await readRemoteDDS();
+            state.dds=dds;
+            showDDS(dds);
+            await configureSmartSensor(dds);
+          }catch(ddsErr){
+            state.dds=null;
+            els.ddsStatus.textContent='chyba';
+            log('DDS se nepodařilo načíst: '+ddsErr.message);
+          }
+        }else{
+          els.ddsStatus.textContent='bez DDS';
+          log('Sensor ID '+id+' je nechytré čidlo; zatím zůstávám v RAW.');
+        }
       }
     }catch(e){
       log('Sensor ID se nepodařilo načíst: '+e.message);
@@ -271,7 +512,17 @@ async function initDevice(){
 }
 
 async function setPeriod(){
-  const ms=Number(els.period.value);
+  let ms=Number(els.period.value);
+  if(state.dds&&Number.isFinite(state.dds.minSamplePeriod)){
+    const minMs=Math.max(1,Math.ceil(state.dds.minSamplePeriod*1000));
+    if(ms<minMs){
+      ms=minMs;
+      if(![...els.period.options].some(o=>Number(o.value)===minMs)){
+        const o=document.createElement('option');o.value=String(minMs);o.textContent=minMs+' ms (minimum čidla)';els.period.prepend(o);
+      }
+      els.period.value=String(minMs);
+    }
+  }
   const seconds=ms/1000;
   const ticks=Math.max(1,Math.round(seconds/state.info.tick));
   const p=[ticks&255,(ticks>>8)&255,(ticks>>16)&255,(ticks>>24)&255];
@@ -286,7 +537,7 @@ async function startMeasurement(){
     await setPeriod();
     await command(CMD.START);
     state.measuring=true;
-    state.count=0;state.offset=0;els.count.textContent='0';els.value.textContent='—';
+    state.count=0;els.count.textContent='0';els.value.textContent='—';
     els.stop.disabled=false;els.zero.disabled=false;
     setStatus('měřím','ok');
     log('START OK');
@@ -329,6 +580,7 @@ async function connect(){
     await device.open();
     state.device=device;
     state.info=PRODUCTS[device.productId]||{name:'Neznámý Vernier',tick:.001,defaultMs:100,kind:'unknown'};
+    state.sensorId=null;state.dds=null;state.offset=0;state.lastRaw=NaN;state.lastValue=NaN;
     state.outReportId=findOutReportId(device);
     device.addEventListener('inputreport',onInputReport);
 
@@ -364,11 +616,11 @@ async function disconnect(){
   try{if(state.measuring)await stopMeasurement()}catch(_){}
   try{state.device.removeEventListener('inputreport',onInputReport)}catch(_){}
   try{await state.device.close()}catch(_){}
-  state.device=null;state.info=null;state.pending.clear();state.count=0;state.offset=0;state.lastRaw=NaN;state.measuring=false;
+  state.device=null;state.info=null;state.pending.clear();state.count=0;state.offset=0;state.lastRaw=NaN;state.lastValue=NaN;state.measuring=false;state.sensorId=null;state.dds=null;state.readingDDS=false;
   els.connect.disabled=false;els.disconnect.disabled=true;els.start.disabled=true;els.stop.disabled=true;els.zero.disabled=true;els.period.disabled=true;
   els.deviceName.textContent='—';els.deviceMeta.textContent='Podporované testovací typy: Go!Link, Go!Temp, Go!Motion.';
-  for(const id of ['vid','pid','type','sensorId','outReport'])els[id].textContent='—';
-  els.count.textContent='0';els.value.textContent='—';setStatus('nepřipojen');
+  for(const id of ['vid','pid','type','sensorId','sensorName','sensorUnit','calibration','ddsStatus','outReport'])els[id].textContent='—';
+  els.count.textContent='0';els.value.textContent='—';els.unit.textContent='RAW';setStatus('nepřipojen');
   log('Odpojeno');
 }
 
@@ -378,9 +630,17 @@ els.start.addEventListener('click',startMeasurement);
 els.stop.addEventListener('click',stopMeasurement);
 els.zero.addEventListener('click',()=>{
   if(!Number.isFinite(state.lastRaw))return;
-  state.offset=state.lastRaw;
-  els.value.textContent='0';
-  log('RAW nula nastavena na '+state.offset);
+  if(state.dds){
+    const v=physicalValue(state.lastRaw);
+    if(!Number.isFinite(v))return;
+    state.offset=v;
+    els.value.textContent='0';
+    log('Nula zobrazení nastavena na '+formatMeasured(v)+' '+els.unit.textContent);
+  }else{
+    state.offset=state.lastRaw;
+    els.value.textContent='0';
+    log('RAW nula nastavena na '+state.offset);
+  }
 });
 })();
 </script>
