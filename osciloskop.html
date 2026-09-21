@@ -149,7 +149,7 @@ canvas{display:block;width:100%;height:100%}
   <div class="layout">
     <section class="scope-card" id="scopeCard">
       <div class="scope-head">
-        <div class="scope-title">U(t)</div>
+        <div class="scope-title">U(t) <span id="triggerState" style="font-size:.72rem;font-weight:600;color:var(--muted)">· auto trigger</span></div>
         <div id="status" class="status">nepřipojen</div>
       </div>
 
@@ -242,7 +242,8 @@ const els={
   freq:document.querySelector('#freq'),
   periodOut:document.querySelector('#periodOut'),
   dc:document.querySelector('#dc'),
-  acrms:document.querySelector('#acrms')
+  acrms:document.querySelector('#acrms'),
+  triggerState:document.querySelector('#triggerState')
 };
 
 const ctx=els.canvas.getContext('2d');
@@ -285,6 +286,56 @@ function currentWindow(){
   let i=state.samples.length-1;
   while(i>0 && state.samples[i-1].t>=start)i--;
   return state.samples.slice(i);
+}
+
+function triggeredDisplayWindow(){
+  const duration=Number(els.window.value)||.2;
+  if(state.samples.length<4){
+    return {data:currentWindow(),start:null,triggered:false};
+  }
+
+  const end=state.samples[state.samples.length-1].t;
+  const recentStart=Math.max(state.samples[0].t,end-Math.max(duration*2.5,.25));
+  let first=0;
+  while(first<state.samples.length-1 && state.samples[first].t<recentStart)first++;
+  const recent=state.samples.slice(Math.max(0,first-1));
+  if(recent.length<4)return {data:currentWindow(),start:null,triggered:false};
+
+  const vals=recent.map(p=>p.v);
+  const dc=vals.reduce((a,b)=>a+b,0)/vals.length;
+  const min=Math.min(...vals),max=Math.max(...vals);
+  const pp=max-min;
+
+  // U téměř konstantního signálu není trigger smysluplný.
+  if(!Number.isFinite(pp)||pp<0.005){
+    return {data:currentWindow(),start:null,triggered:false};
+  }
+
+  // Najdi nejnovější rostoucí průchod přes střední hodnotu, po kterém už
+  // máme celý zvolený sweep. Každý nový sweep tak začíná ve stejné fázi.
+  let trigger=NaN;
+  const tolerance=Math.max(state.samplePeriodMs/1000*1.5,0.0005);
+  for(let i=1;i<recent.length;i++){
+    const p0=recent[i-1],p1=recent[i];
+    const y0=p0.v-dc,y1=p1.v-dc;
+    if(y0<=0 && y1>0 && p1.v!==p0.v){
+      const frac=(dc-p0.v)/(p1.v-p0.v);
+      const cross=p0.t+Math.max(0,Math.min(1,frac))*(p1.t-p0.t);
+      if(cross+duration<=end+tolerance)trigger=cross;
+    }
+  }
+
+  if(!Number.isFinite(trigger)){
+    return {data:currentWindow(),start:null,triggered:false};
+  }
+
+  let i0=0;
+  while(i0<state.samples.length-1 && state.samples[i0].t<trigger-state.samplePeriodMs/1000)i0++;
+  let i1=i0;
+  const stop=trigger+duration+state.samplePeriodMs/1000;
+  while(i1<state.samples.length && state.samples[i1].t<=stop)i1++;
+
+  return {data:state.samples.slice(i0,i1),start:trigger,triggered:true};
 }
 
 function median(arr){
@@ -367,10 +418,13 @@ function draw(){
 
   const padL=52*dpr,padR=12*dpr,padT=12*dpr,padB=30*dpr;
   const W=w-padL-padR,H=h-padT-padB;
-  const data=currentWindow();
+  const display=triggeredDisplayWindow();
+  const data=display.data;
   const duration=Number(els.window.value)||.2;
   const tEnd=data.length?data[data.length-1].t:duration;
-  const tStart=tEnd-duration;
+  const tStart=display.triggered ? display.start : tEnd-duration;
+
+  els.triggerState.textContent=display.triggered?'· trigger zamknutý':'· auto trigger';
 
   let yMin=-1,yMax=1;
   if(data.length){
@@ -547,7 +601,7 @@ function reset(status='nepřipojen',type=''){
   state.sampleIndex=0;state.samplePeriodMs=selectedMeasurementPeriodMs();
   els.connect.disabled=false;els.connect.textContent='Připojit';
   els.disconnect.disabled=true;els.pause.disabled=true;els.pause.textContent='Pauza';els.zero.disabled=true;
-  els.device.textContent='';setStatus(status,type);updateUI();
+  els.device.textContent='';els.triggerState.textContent='· auto trigger';setStatus(status,type);updateUI();
 }
 
 async function disconnect(){
