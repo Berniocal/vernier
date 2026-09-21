@@ -133,6 +133,10 @@ button:disabled{opacity:.42;cursor:not-allowed}
           <option value="60">60 s</option>
         </select>
       </label>
+      <div class="seg" aria-label="Měřítko osy y">
+        <button id="yAuto" type="button" class="active">Y auto</button>
+        <button id="yZero" type="button">Y od 0</button>
+      </div>
       <span id="graphHint" class="graph-hint">0 s zůstává vlevo, celý záznam se průběžně zmenšuje.</span>
     </div>
     <div id="graphWrap" class="graph-wrap">
@@ -161,11 +165,11 @@ const CMD={
 const state={
   device:null,info:null,outReportId:0,pending:new Map(),count:0,offset:0,lastRaw:NaN,lastValue:NaN,
   measuring:false,sensorId:null,dds:null,readingDDS:false,
-  graphMode:'fit',graphData:[],sampleTime:0,lastDraw:0
+  graphMode:'fit',yMode:'auto',graphData:[],sampleTime:0,lastDraw:0
 };
 
 const els={};
-for(const id of ['connect','disconnect','start','stop','zero','period','decimals','avgValue','minValue','maxValue','status','deviceName','deviceMeta','value','unit','graphFit','graphScroll','graphWindow','graphHint','graphWrap','graph','graphEmpty']) els[id]=document.getElementById(id);
+for(const id of ['connect','disconnect','start','stop','zero','period','decimals','avgValue','minValue','maxValue','status','deviceName','deviceMeta','value','unit','graphFit','graphScroll','graphWindow','yAuto','yZero','graphHint','graphWrap','graph','graphEmpty']) els[id]=document.getElementById(id);
 const graphCtx=els.graph.getContext('2d');
 
 function log(msg){
@@ -373,6 +377,13 @@ function setGraphMode(mode){
   drawGraph();
 }
 
+function setYMode(mode){
+  state.yMode=mode;
+  els.yAuto.classList.toggle('active',mode==='auto');
+  els.yZero.classList.toggle('active',mode==='zero');
+  drawGraph();
+}
+
 function resizeGraph(){
   const r=els.graph.getBoundingClientRect();
   const dpr=Math.min(window.devicePixelRatio||1,2);
@@ -428,7 +439,11 @@ function drawGraph(){
   if(!ys.length)return;
 
   let yMin=Math.min(...ys),yMax=Math.max(...ys);
-  if(yMin===yMax){
+  if(state.yMode==='zero'){
+    yMin=0;
+    const positiveMax=Math.max(0,yMax);
+    yMax=positiveMax>0 ? positiveMax*1.08 : 1;
+  }else if(yMin===yMax){
     const d=Math.max(Math.abs(yMin)*0.02,0.5);
     yMin-=d;yMax+=d;
   }else{
@@ -852,6 +867,8 @@ els.stop.addEventListener('click',stopMeasurement);
 els.graphFit.addEventListener('click',()=>setGraphMode('fit'));
 els.graphScroll.addEventListener('click',()=>setGraphMode('scroll'));
 els.graphWindow.addEventListener('change',drawGraph);
+els.yAuto.addEventListener('click',()=>setYMode('auto'));
+els.yZero.addEventListener('click',()=>setYMode('zero'));
 els.decimals.addEventListener('change',()=>{
   refreshDisplayedCurrent();
   updateStats();
@@ -859,6 +876,7 @@ els.decimals.addEventListener('change',()=>{
 });
 new ResizeObserver(drawGraph).observe(els.graphWrap);
 setGraphMode('fit');
+setYMode('auto');
 
 els.zero.addEventListener('click',()=>{
   if(!Number.isFinite(state.lastRaw))return;
