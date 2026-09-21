@@ -6,13 +6,22 @@
 <meta name="theme-color" content="#f8fafc">
 <title>Vernier – aplikace</title>
 <style>
-:root{--bg:#f8fafc;--card:#fff;--text:#111827;--muted:#667085;--line:#e2e8f0;--accent:#2563eb}
+:root{--bg:#f8fafc;--card:#fff;--text:#111827;--muted:#667085;--line:#e2e8f0;--accent:#2563eb;--section:#f1f5f9}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
-main{width:min(920px,calc(100% - 32px));margin:0 auto;padding:48px 0 64px}
+main{width:min(960px,calc(100% - 32px));margin:0 auto;padding:48px 0 64px}
 header{margin-bottom:28px}
 h1{margin:0 0 8px;font-size:clamp(2rem,5vw,3.2rem);letter-spacing:-.04em}
-header p{margin:0;color:var(--muted);font-size:1.05rem}
+header p{margin:0;color:var(--muted);font-size:1.05rem;line-height:1.5}
+.tool-group{margin-bottom:16px;border:1px solid var(--line);border-radius:18px;background:var(--card);overflow:hidden;box-shadow:0 1px 2px rgba(15,23,42,.04)}
+.tool-group summary{list-style:none;cursor:pointer;padding:18px 22px;display:flex;align-items:center;justify-content:space-between;gap:16px;background:var(--section);user-select:none}
+.tool-group summary::-webkit-details-marker{display:none}
+.summary-left{display:flex;flex-direction:column;gap:3px}
+.summary-title{font-size:1.16rem;font-weight:800;letter-spacing:-.02em}
+.summary-sub{font-size:.9rem;font-weight:500;color:var(--muted)}
+.summary-icon{color:var(--accent);font-size:1.05rem;font-weight:800;transition:transform .16s ease}
+.tool-group[open] .summary-icon{transform:rotate(90deg)}
+.group-content{padding:18px}
 .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
 .card{display:block;text-decoration:none;color:inherit;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:22px;transition:.16s ease}
 .card:hover{transform:translateY(-2px);border-color:#bfdbfe;box-shadow:0 10px 30px rgba(15,23,42,.07)}
@@ -20,72 +29,104 @@ header p{margin:0;color:var(--muted);font-size:1.05rem}
 h2{margin:0 0 8px;font-size:1.35rem;letter-spacing:-.02em}
 .card p{margin:0;color:var(--muted);line-height:1.5}
 .open{display:block;margin-top:22px;color:var(--accent);font-weight:750}
-@media(max-width:680px){main{padding-top:28px}.grid{grid-template-columns:1fr}}
+@media(max-width:680px){
+  main{padding-top:28px}
+  .grid{grid-template-columns:1fr}
+  .tool-group summary{padding:15px 17px}
+  .group-content{padding:12px}
+  .summary-title{font-size:1.05rem}
+  .summary-sub{font-size:.8rem}
+}
 </style>
 </head>
 <body>
 <main>
   <header>
     <h1>Vernier</h1>
-    <p>Jednoduché aplikace pro měření se senzory Go Direct.</p>
+    <p>Aplikace pro měření se senzory Vernier.</p>
   </header>
 
-  <section class="grid">
-    <a class="card" href="./go-direct-lab.html">
-      <span class="tag">Obecné měření</span>
-      <h2>Go Direct Lab</h2>
-      <p>Živý graf, výběr kanálů, vzorkování, tabulka dat, dopočítané veličiny a CSV export.</p>
-      <span class="open">Otevřít →</span>
-    </a>
+  <details class="tool-group" open>
+    <summary>
+      <span class="summary-left">
+        <span class="summary-title">Novější senzory</span>
+        <span class="summary-sub">Go Direct · Bluetooth / USB</span>
+      </span>
+      <span class="summary-icon">▶</span>
+    </summary>
+    <div class="group-content">
+      <section class="grid">
+        <a class="card" href="./go-direct-lab.html">
+          <span class="tag">Obecné měření</span>
+          <h2>Go Direct Lab</h2>
+          <p>Živý graf, výběr kanálů, vzorkování, tabulka dat, dopočítané veličiny a CSV export.</p>
+          <span class="open">Otevřít →</span>
+        </a>
 
-    <a class="card" href="./rovnovaha-sil.html">
-      <span class="tag">Vektory</span>
-      <h2>Rovnováha tří sil</h2>
-      <p>Tři Vernier siloměry současně. Tři velké hodnoty v newtonech pro pokus se společným očkem.</p>
-      <span class="open">Otevřít →</span>
-    </a>
+        <a class="card" href="./rovnovaha-sil.html">
+          <span class="tag">Vektory</span>
+          <h2>Rovnováha tří sil</h2>
+          <p>Tři Vernier siloměry současně. Tři velké hodnoty v newtonech pro pokus se společným očkem.</p>
+          <span class="open">Otevřít →</span>
+        </a>
 
-    <a class="card" href="./hydrostaticky-tlak.html">
-      <span class="tag">Tlak</span>
-      <h2>Hydrostatický tlak</h2>
-      <p>Velký displej tlaku s připojením přes Bluetooth nebo USB, volbou jednotek a rychlým vynulováním.</p>
-      <span class="open">Otevřít →</span>
-    </a>
+        <a class="card" href="./hydrostaticky-tlak.html">
+          <span class="tag">Tlak</span>
+          <h2>Hydrostatický tlak</h2>
+          <p>Velký displej tlaku s připojením přes Bluetooth nebo USB, volbou jednotek a rychlým vynulováním.</p>
+          <span class="open">Otevřít →</span>
+        </a>
 
-    <a class="card" href="./osciloskop.html">
-      <span class="tag">Elektřina</span>
-      <h2>Osciloskop</h2>
-      <p>Živý průběh napětí U(t) z Go Direct voltmetru, efektivní hodnota, amplituda, frekvence a perioda.</p>
-      <span class="open">Otevřít →</span>
-    </a>
+        <a class="card" href="./osciloskop.html">
+          <span class="tag">Elektřina</span>
+          <h2>Osciloskop</h2>
+          <p>Go Direct voltmetr: U(t), efektivní hodnota, amplituda, frekvence a perioda.</p>
+          <span class="open">Otevřít →</span>
+        </a>
 
-    <a class="card" href="./osciloskop-30v.html">
-      <span class="tag">Elektřina</span>
-      <h2>Osciloskop 30 V</h2>
-      <p>Starší Voltage Probe 30V přes LabQuest Mini: U(t), efektivní hodnota, amplituda, frekvence a perioda.</p>
-      <span class="open">Otevřít →</span>
-    </a>
+        <a class="card" href="./pohyb-kmitani.html">
+          <span class="tag">Pohyb</span>
+          <h2>Pohyb a kmitání</h2>
+          <p>Go Direct Motion: živě posouvaný graf nebo klasický osciloskop. Výchylka, rychlost a zrychlení s automatickým triggerem.</p>
+          <span class="open">Otevřít →</span>
+        </a>
+      </section>
+    </div>
+  </details>
 
-    <a class="card" href="./proudovy-osciloskop.html">
-      <span class="tag">Elektřina</span>
-      <h2>Proudový osciloskop</h2>
-      <p>HCS-BTA přes LabQuest Mini: průběh I(t), efektivní proud, amplituda, frekvence a perioda.</p>
-      <span class="open">Otevřít →</span>
-    </a>
+  <details class="tool-group">
+    <summary>
+      <span class="summary-left">
+        <span class="summary-title">Starší senzory</span>
+        <span class="summary-sub">Go!Link / LabQuest Mini · BTA a starší USB senzory</span>
+      </span>
+      <span class="summary-icon">▶</span>
+    </summary>
+    <div class="group-content">
+      <section class="grid">
+        <a class="card" href="./stare-senzory.html">
+          <span class="tag">Obecné měření</span>
+          <h2>Starší Vernier senzory</h2>
+          <p>Měření se staršími senzory přes Go!Link a WebHID, včetně grafu, nulování a statistik.</p>
+          <span class="open">Otevřít →</span>
+        </a>
 
-    <a class="card" href="./pohyb-kmitani.html">
-      <span class="tag">Pohyb</span>
-      <h2>Pohyb a kmitání</h2>
-      <p>Go Direct Motion: živě posouvaný graf nebo klasický osciloskop. Výchylka, rychlost a zrychlení s automatickým triggerem.</p>
-      <span class="open">Otevřít →</span>
-    </a>
-      <a class="card" href="./stare-senzory.html">
-      <span class="tag">Experimentální</span>
-      <h2>Starší Vernier senzory</h2>
-      <p>Test přímého USB připojení Go!Link, Go!Temp a Go!Motion přes WebHID a starý GoIO protokol.</p>
-      <span class="open">Otevřít →</span>
-    </a>
-  </section>
+        <a class="card" href="./osciloskop-30v.html">
+          <span class="tag">Elektřina</span>
+          <h2>Osciloskop 30 V</h2>
+          <p>Voltage Probe 30V přes LabQuest Mini: U(t), efektivní hodnota, amplituda, frekvence a perioda.</p>
+          <span class="open">Otevřít →</span>
+        </a>
+
+        <a class="card" href="./proudovy-osciloskop.html">
+          <span class="tag">Elektřina</span>
+          <h2>Proudový osciloskop</h2>
+          <p>HCS-BTA přes LabQuest Mini: I(t), efektivní proud, amplituda, frekvence a perioda.</p>
+          <span class="open">Otevřít →</span>
+        </a>
+      </section>
+    </div>
+  </details>
 </main>
 </body>
 </html>
