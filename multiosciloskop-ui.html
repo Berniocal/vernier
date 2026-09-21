@@ -1,0 +1,457 @@
+<!doctype html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Multiosciloskop U–I – LabQuest Mini</title>
+<style>
+:root{--bg:#f4f5f7;--card:#fff;--text:#111827;--muted:#667085;--line:#d9dee7;--dark:#101828;--u:#2563eb;--i:#ea580c;--p:#15803d}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--text)}
+button,select,input{font:inherit}
+.app{width:min(1240px,calc(100% - 24px));margin:0 auto;padding:14px 0 28px}
+header{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;margin-bottom:10px}
+h1{margin:0;font-size:clamp(1.25rem,2.2vw,1.9rem);letter-spacing:-.03em}
+.actions{display:flex;gap:7px}
+button{border:1px solid var(--line);background:#fff;color:var(--text);border-radius:10px;padding:8px 12px;cursor:pointer;font-weight:700}
+button:hover{background:#f8fafc} button:disabled{opacity:.42;cursor:not-allowed}
+.primary{background:var(--dark);border-color:var(--dark);color:#fff}.primary:hover{background:#1f2937}
+.connect-guide{grid-column:1/-1;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+.guide{background:#fff;border:1px solid var(--line);border-radius:11px;padding:9px 11px;font-size:.79rem;line-height:1.35}
+.guide b{display:block;margin-bottom:2px}.guide small{color:var(--muted)}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:10px}
+.scope,.panel{background:#fff;border:1px solid var(--line);border-radius:16px;overflow:hidden;box-shadow:0 1px 2px rgba(16,24,40,.04)}
+.scope-head{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 12px;border-bottom:1px solid var(--line)}
+.legend{display:flex;align-items:center;gap:12px;font-size:.8rem;font-weight:750}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px}.u-dot{background:var(--u)}.i-dot{background:var(--i)}
+.phase{color:var(--muted);font-size:.76rem;font-weight:650}
+.status{font-size:.78rem;color:var(--muted)}.status.ok{color:#15803d}.status.err{color:#b42318}.status.warn{color:#b45309}
+.canvas-wrap{position:relative;height:470px;background:#fff}
+canvas{display:block;width:100%;height:100%}
+.empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;padding:24px;color:var(--muted);pointer-events:none}
+.controls{display:flex;align-items:center;flex-wrap:wrap;gap:7px;padding:8px;border-top:1px solid var(--line)}
+.controls label{display:flex;align-items:center;gap:5px;color:var(--muted);font-size:.76rem}
+.controls select{border:1px solid var(--line);border-radius:8px;padding:5px 7px;background:#fff}
+.controls button{padding:6px 9px;font-size:.76rem}
+.device{margin-left:auto;color:var(--muted);font-size:.7rem;max-width:280px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.panel{padding:10px;display:flex;flex-direction:column;gap:8px}
+.primary-metrics{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.big{border:1px solid var(--line);border-radius:13px;padding:10px;text-align:center}
+.big .label{font-size:.76rem;color:var(--muted)}.big .value{font-size:clamp(2rem,4vw,3.1rem);font-weight:820;letter-spacing:-.045em;font-variant-numeric:tabular-nums}.big .unit{font-size:1rem;color:var(--muted);font-weight:750}
+.metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+.metric{border:1px solid var(--line);border-radius:11px;padding:8px}
+.metric .label{font-size:.7rem;color:var(--muted)}.metric .value{font-size:1.08rem;font-weight:780;margin-top:2px;font-variant-numeric:tabular-nums}.metric .unit{font-size:.68rem;color:var(--muted)}
+.note{font-size:.71rem;line-height:1.42;color:var(--muted);padding:2px 3px}
+.diag{font-size:.7rem;color:var(--muted);border-top:1px solid var(--line);padding-top:7px}
+.diag summary{cursor:pointer;font-weight:700}.diag code{display:block;white-space:pre-wrap;word-break:break-all;margin-top:5px;font-size:.65rem}
+.safety{margin-top:10px;padding:9px 11px;border-radius:11px;background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;font-size:.76rem;line-height:1.4}
+@media(max-width:960px){.layout{grid-template-columns:1fr}.canvas-wrap{height:390px}.panel{display:block}.primary-metrics{margin-bottom:7px}.note{margin-top:7px}}
+@media(max-width:680px){
+ .app{width:calc(100% - 8px);padding-top:5px}header{gap:5px}h1{font-size:1.05rem}.actions button{padding:5px 7px;font-size:.7rem}
+ .connect-guide{grid-template-columns:1fr;gap:4px}.guide{padding:6px 8px;font-size:.7rem}.canvas-wrap{height:300px}
+ .scope-head{padding:6px 8px}.legend{gap:7px;font-size:.7rem}.phase{font-size:.66rem}.status{font-size:.68rem}
+ .controls{padding:5px;gap:4px}.controls label{font-size:.67rem}.controls select,.controls button{font-size:.68rem;padding:4px 5px}.device{display:none}
+ .panel{padding:7px}.big{padding:7px}.big .value{font-size:2.2rem}.metrics{gap:5px}.metric{padding:6px}.metric .value{font-size:.95rem}
+}
+:fullscreen .scope{position:fixed;inset:0;z-index:20;border:0;border-radius:0;display:grid;grid-template-rows:auto minmax(0,1fr) auto}:fullscreen .canvas-wrap{height:auto}
+</style>
+</head>
+<body>
+<div class="app">
+<header>
+  <h1>Multiosciloskop U–I</h1>
+  <div class="actions"><button id="connect" class="primary">Připojit</button><button id="disconnect" disabled>Odpojit</button></div>
+  <div class="connect-guide">
+    <div class="guide"><b>Napětí</b><small>Voltage Probe 30V (30V-BTA)</small></div>
+    <div class="guide"><b>Proud</b><small>High Current Sensor (HCS-BTA)</small></div>
+    <div class="guide"><b>Rozhraní</b><small>LabQuest Mini · čidla mohou být v libovolných analogových CH1–CH3</small></div>
+  </div>
+</header>
+
+<div class="layout">
+  <section class="scope" id="scopeCard">
+    <div class="scope-head">
+      <div class="legend"><span><span class="dot u-dot"></span>U(t)</span><span><span class="dot i-dot"></span>I(t)</span><span id="phaseLabel" class="phase">φ = —</span></div>
+      <div id="status" class="status">nepřipojen</div>
+    </div>
+    <div class="canvas-wrap" id="canvasWrap">
+      <canvas id="scope"></canvas>
+      <div class="empty" id="empty">Připoj oba senzory k LabQuest Mini.</div>
+    </div>
+    <div class="controls">
+      <label>Čas:
+        <select id="window">
+          <option value="0.05">0,05 s</option><option value="0.1">0,10 s</option>
+          <option value="0.2" selected>0,20 s</option><option value="0.5">0,50 s</option>
+          <option value="1">1 s</option><option value="2">2 s</option>
+        </select>
+      </label>
+      <label>Vzorkování:
+        <select id="rate">
+          <option value="500">500 Hz</option><option value="1000" selected>1000 Hz</option>
+          <option value="2000">2000 Hz</option><option value="5000">5000 Hz</option><option value="10000">10 kHz</option>
+        </select>
+      </label>
+      <button id="pause" disabled>Pauza</button><button id="zeroI" disabled>Nulovat I</button><button id="fullscreen">Celá obrazovka</button>
+      <span id="device" class="device"></span>
+    </div>
+  </section>
+
+  <aside class="panel">
+    <div class="primary-metrics">
+      <div class="big"><div class="label">Uef</div><span class="value" id="urms">—</span><span class="unit"> V</span></div>
+      <div class="big"><div class="label">Ief</div><span class="value" id="irms">—</span><span class="unit"> A</span></div>
+    </div>
+    <div class="metrics">
+      <div class="metric"><div class="label">Činný výkon P</div><div class="value"><span id="power">—</span><span class="unit"> W</span></div></div>
+      <div class="metric"><div class="label">Zdánlivý výkon S</div><div class="value"><span id="apparent">—</span><span class="unit"> VA</span></div></div>
+      <div class="metric"><div class="label">Jalový výkon Q</div><div class="value"><span id="reactive">—</span><span class="unit"> var</span></div></div>
+      <div class="metric"><div class="label">Účiník P/S</div><div class="value"><span id="pf">—</span></div></div>
+      <div class="metric"><div class="label">Fázový posun U−I</div><div class="value"><span id="phase">—</span><span class="unit"> °</span></div></div>
+      <div class="metric"><div class="label">Frekvence</div><div class="value"><span id="freq">—</span><span class="unit"> Hz</span></div></div>
+      <div class="metric"><div class="label">Perioda</div><div class="value"><span id="period">—</span><span class="unit"> ms</span></div></div>
+      <div class="metric"><div class="label">cos φ</div><div class="value"><span id="cosphi">—</span></div></div>
+    </div>
+    <div class="note">Fázový posun je určen ze základní harmonické. Kladné φ znamená, že proud za napětím zaostává. Účiník P/S je skutečný účiník; u deformovaných průběhů se nemusí rovnat cos φ.</div>
+    <details class="diag"><summary>Diagnostika dat</summary><code id="diag">—</code></details>
+  </aside>
+</div>
+
+<div class="safety"><b>Bezpečnost:</b> Voltage Probe 30V má rozsah ±30 V a HCS-BTA ±10 A. Používej nízkonapěťové školní obvody; nepřipojuj senzory přímo k síťovému napětí.</div>
+</div>
+
+<script>
+(()=>{
+'use strict';
+const VID=0x08F7,PID=0x0008;
+const VOLT_ID=11,CURRENT_ID=90;
+const CMD={START:0x18,STOP:0x19,INIT:0x1A,SET_PERIOD:0x1B,SET_ANALOG_INPUT:0x21,READ_NV_MEM:0x27,GET_SENSOR_ID:0x28,SET_SAMPLING_MODE:0x29,SET_ENABLE_MASK:0x2C};
+const LOCK={COMMAND:0x58,RESPONSE:0x98,RESPONSE_INIT:0xB8,MEASUREMENT:0x20};
+const INIT_PAYLOAD=[0xA5,0x4A,0x06,0x49,0x07,0x48,0x08,0x47,0x09,0x46,0x0A,0x45,0x0B,0x44,0x0C,0x43,0x0D,0x42,0x0E,0x41];
+
+const state={usb:null,interfaceNumber:0,inEndpoint:0,outEndpoint:0,reading:false,counter:0,pending:new Map(),
+  voltageCh:null,currentCh:null,currentDDS:null,measuring:false,paused:false,rate:1000,u:[],i:[],uIndex:0,iIndex:0,
+  iOffset:0,maxSamples:120000,lastDraw:0,unknown:0,lastUnknown:'',interleavePhase:0};
+
+const $=id=>document.getElementById(id);
+const els={connect:$('connect'),disconnect:$('disconnect'),pause:$('pause'),zeroI:$('zeroI'),fullscreen:$('fullscreen'),
+ window:$('window'),rate:$('rate'),status:$('status'),device:$('device'),canvas:$('scope'),canvasWrap:$('canvasWrap'),empty:$('empty'),
+ urms:$('urms'),irms:$('irms'),power:$('power'),apparent:$('apparent'),reactive:$('reactive'),pf:$('pf'),phase:$('phase'),
+ freq:$('freq'),period:$('period'),cosphi:$('cosphi'),phaseLabel:$('phaseLabel'),diag:$('diag')};
+const ctx=els.canvas.getContext('2d');
+
+function setStatus(s,t=''){els.status.textContent=s;els.status.className='status'+(t?' '+t:'')}
+function fmt(v,d=2){return Number.isFinite(v)?v.toLocaleString('cs-CZ',{minimumFractionDigits:d,maximumFractionDigits:d}):'—'}
+function checksum(a){let s=0;for(const b of a)s=(s+b)&255;return s}
+function u32(v){return [v&255,(v>>>8)&255,(v>>>16)&255,(v>>>24)&255]}
+function rU32(b,o=0){return ((b[o]||0)|((b[o+1]||0)<<8)|((b[o+2]||0)<<16)|((b[o+3]||0)<<24))>>>0}
+function rI32(b,o=0){return rU32(b,o)|0}
+function hex(b){return Array.from(b).map(x=>x.toString(16).padStart(2,'0')).join(' ')}
+function nextCounter(){state.counter=(state.counter+255)&255;return state.counter}
+function encode(cmd,counter,params=[]){const len=5+params.length;const base=[LOCK.COMMAND,len,counter,cmd,...params];return Uint8Array.from([LOCK.COMMAND,len,counter,checksum(base),cmd,...params])}
+
+function parsePackets(buffer){
+  const out=[];let o=0;
+  while(o+4<=buffer.length){
+    const lock=buffer[o],len=buffer[o+1],resp=lock===LOCK.RESPONSE||lock===LOCK.RESPONSE_INIT,meas=lock===LOCK.MEASUREMENT;
+    if((!resp&&!meas)||len<(resp?6:4)||o+len>buffer.length){o++;continue}
+    const f=buffer.subarray(o,o+len),expected=checksum([...f.subarray(0,3),...f.subarray(4)]);
+    if(expected!==f[3]){o++;continue}
+    if(resp)out.push({kind:'response',command:f[4],requestCounter:f[5],payload:f.slice(6)});
+    else out.push({kind:'measurement',payload:f.slice(4),frame:f.slice()});
+    o+=len;
+  }
+  return out;
+}
+function waitResponse(cmd,counter,timeout=2500){
+  const key=cmd+':'+counter;
+  return new Promise((resolve,reject)=>{
+    const timer=setTimeout(()=>{state.pending.delete(key);reject(new Error('LabQuest Mini neodpověděl na příkaz 0x'+cmd.toString(16)+'.'))},timeout);
+    state.pending.set(key,{resolve,reject,timer});
+  });
+}
+async function send(cmd,params=[],timeout=2500){
+  if(!state.usb)throw new Error('LabQuest Mini není připojen.');
+  const c=nextCounter(),p=encode(cmd,c,params),waiting=waitResponse(cmd,c,timeout);
+  const r=await state.usb.transferOut(state.outEndpoint,p);
+  if(r?.status&&r.status!=='ok')throw new Error('USB zápis selhal: '+r.status);
+  return waiting;
+}
+function ack(payload,name){if(payload.length===1&&payload[0]!==0)throw new Error(name+' odmítnuto (0x'+payload[0].toString(16)+').')}
+
+function ascii(b,o,n){let s='';for(let k=0;k<n;k++){const x=b[o+k];if(!x)break;if(x>=32&&x<=126)s+=String.fromCharCode(x)}return s.trim()}
+function parseDDS(bytes){
+  if(bytes.length!==128)return null;
+  const dv=new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength),pages=[];
+  for(let k=0;k<3;k++){const o=70+k*19;pages.push({a:dv.getFloat32(o,true),b:dv.getFloat32(o+4,true),c:dv.getFloat32(o+8,true),unit:ascii(bytes,o+12,7)})}
+  return {longName:ascii(bytes,8,20),shortName:ascii(bytes,28,12),operationType:bytes[57],equation:dv.getInt8(58),activePage:Math.min(bytes[69],2),pages};
+}
+async function readDDS(ch){
+  const all=new Uint8Array(128);
+  for(let addr=0;addr<128;addr+=32){
+    const count=Math.min(32,128-addr),p=await send(CMD.READ_NV_MEM,[ch,...u32(addr),count&255,(count>>8)&255],3000);
+    if(p.length<count)throw new Error('Neúplná DDS odpověď.');
+    all.set(p.slice(0,count),addr);
+  }
+  return parseDDS(all);
+}
+function currentCalibration(){
+  const d=state.currentDDS,p=d?.pages?.[d.activePage]||d?.pages?.[0];
+  if(d&&d.equation===1&&p&&Number.isFinite(p.a)&&Number.isFinite(p.b))return {a:p.a,b:p.b,source:'DDS'};
+  return {a:-11.31,b:4.51,source:'HCS-BTA'};
+}
+function rawToInputVolts(raw,pm10){return pm10?raw*(20/4095)-10:raw*(5/4095)}
+function voltageValue(raw){return 3.206*rawToInputVolts(raw,true)}
+function currentValue(raw){const c=currentCalibration();return c.a+c.b*rawToInputVolts(raw,false)-state.iOffset}
+function plausible(v){return Number.isFinite(v)&&v>=0&&v<=4095}
+
+function decodeTagged(body){
+  const channels=[state.voltageCh,state.currentCh].filter(Number.isFinite);
+  if(channels.length<2)return [];
+  const candidates=[];
+  for(let size=3;size<=8;size++){
+    if(body.length%size)continue;
+    const n=body.length/size;if(n<1||n>200)continue;
+    for(let chPos=0;chPos<size;chPos++){
+      for(let vPos=0;vPos<size-1;vPos++){
+        if(chPos===vPos||chPos===vPos+1)continue;
+        const ev=[];let ok=true;
+        for(let k=0;k<n;k++){
+          const base=k*size,ch=body[base+chPos],raw=body[base+vPos]|(body[base+vPos+1]<<8);
+          if(!channels.includes(ch)||!plausible(raw)){ok=false;break}
+          ev.push({ch,raw});
+        }
+        if(ok&&ev.length){
+          const unique=new Set(ev.map(x=>x.ch)).size;
+          candidates.push({ev,score:ev.length*10+unique*30-size});
+        }
+      }
+      if(size>=5){
+        for(let vPos=0;vPos<=size-4;vPos++){
+          if(chPos>=vPos&&chPos<=vPos+3)continue;
+          const ev=[];let ok=true;
+          for(let k=0;k<n;k++){
+            const base=k*size,ch=body[base+chPos],raw=rI32(body,base+vPos);
+            if(!channels.includes(ch)||!plausible(raw)){ok=false;break}
+            ev.push({ch,raw});
+          }
+          if(ok&&ev.length)candidates.push({ev,score:ev.length*9+new Set(ev.map(x=>x.ch)).size*30-size});
+        }
+      }
+    }
+  }
+  candidates.sort((a,b)=>b.score-a.score);
+  return candidates[0]?.ev||[];
+}
+function decodeMeasurement(payload){
+  if(payload.length<6)return [];
+  const body=payload.subarray(4);
+  let tagged=decodeTagged(body);
+  if(tagged.length)return tagged;
+
+  // Záloha pro firmware, který posílá jen 12bit hodnoty bez čísla kanálu:
+  // předpokládá pevné pořadí povolených kanálů U, I, U, I...
+  if(body.length>=4&&body.length%2===0){
+    const vals=[];for(let o=0;o<body.length;o+=2)vals.push(body[o]|(body[o+1]<<8));
+    if(vals.every(plausible)){
+      const order=[state.voltageCh,state.currentCh];
+      return vals.map(raw=>{const ch=order[state.interleavePhase%2];state.interleavePhase++;return {ch,raw}});
+    }
+  }
+  return [];
+}
+function addSample(ch,raw){
+  if(ch===state.voltageCh){
+    const idx=state.uIndex++,v=voltageValue(raw);if(!Number.isFinite(v)||Math.abs(v)>45)return;
+    if(!state.paused)state.u.push({idx,t:idx/state.rate,v});
+  }else if(ch===state.currentCh){
+    const idx=state.iIndex++,v=currentValue(raw);if(!Number.isFinite(v)||Math.abs(v)>15)return;
+    if(!state.paused)state.i.push({idx,t:idx/state.rate,v});
+  }else return;
+  if(state.u.length>state.maxSamples)state.u.splice(0,state.u.length-state.maxSamples);
+  if(state.i.length>state.maxSamples)state.i.splice(0,state.i.length-state.maxSamples);
+}
+function handleMeasurement(p){
+  const ev=decodeMeasurement(p.payload);
+  if(!ev.length){
+    state.unknown++;state.lastUnknown=hex(p.frame);els.diag.textContent=state.lastUnknown;
+    if(state.unknown===6)setStatus('data přicházejí, dekódování je třeba doladit','warn');
+    return;
+  }
+  for(const e of ev)addSample(e.ch,e.raw);
+  const now=performance.now();if(now-state.lastDraw>45){state.lastDraw=now;update()}
+}
+function handleIncoming(bytes){
+  for(const p of parsePackets(bytes)){
+    if(p.kind==='response'){
+      const key=p.command+':'+p.requestCounter,item=state.pending.get(key);
+      if(item){clearTimeout(item.timer);state.pending.delete(key);item.resolve(p.payload)}
+    }else handleMeasurement(p);
+  }
+}
+async function readLoop(){
+  while(state.reading&&state.usb){
+    try{
+      const r=await state.usb.transferIn(state.inEndpoint,30000);if(!state.reading)break;
+      if(r.status==='stall'){await state.usb.clearHalt('in',state.inEndpoint).catch(()=>{});continue}
+      if(r.status!=='ok'||!r.data)continue;
+      handleIncoming(new Uint8Array(r.data.buffer,r.data.byteOffset,r.data.byteLength));
+    }catch(e){if(state.reading){console.error(e);setStatus('USB spojení přerušeno','err')}break}
+  }
+}
+function pickInterface(c){
+  const list=c?.interfaces||[];
+  return list.find(i=>{const e=i.alternate?.endpoints||[];return e.some(x=>x.direction==='in'&&x.type==='bulk')&&e.some(x=>x.direction==='out'&&x.type==='bulk')})||list[0]||null;
+}
+async function identifySensors(){
+  ack(await send(CMD.INIT,INIT_PAYLOAD,5000),'INIT');
+  const found=[];
+  for(const ch of [1,2,3]){
+    const p=await send(CMD.GET_SENSOR_ID,[ch]);const id=p.length>=4?rU32(p,0):0;if(id)found.push({ch,id});
+  }
+  const volt=found.find(x=>x.id===VOLT_ID),current=found.find(x=>x.id===CURRENT_ID);
+  if(!volt||!current){
+    const got=found.length?found.map(x=>'CH'+x.ch+': ID '+x.id).join(', '):'žádné čidlo';
+    throw new Error('Potřebuji oba senzory: Voltage Probe 30V (ID 11) a High Current Sensor HCS-BTA (ID 90). Nalezeno: '+got+'.');
+  }
+  state.voltageCh=volt.ch;state.currentCh=current.ch;state.currentDDS=null;
+  try{state.currentDDS=await readDDS(current.ch)}catch(e){console.warn('DDS HCS-BTA:',e)}
+  ack(await send(CMD.SET_ANALOG_INPUT,[volt.ch,4]),'Nastavení Voltage Probe 30V');
+  const currentInput=state.currentDDS?.operationType===2?4:0;
+  ack(await send(CMD.SET_ANALOG_INPUT,[current.ch,currentInput]),'Nastavení HCS-BTA');
+  ack(await send(CMD.SET_SAMPLING_MODE,[volt.ch,0]),'Vzorkování napětí');
+  ack(await send(CMD.SET_SAMPLING_MODE,[current.ch,0]),'Vzorkování proudu');
+  const mask=(1<<volt.ch)|(1<<current.ch);
+  ack(await send(CMD.SET_ENABLE_MASK,[mask&255,(mask>>8)&255,(mask>>16)&255,(mask>>24)&255]),'Povolení kanálů');
+  els.device.textContent='CH'+volt.ch+' Voltage Probe 30V · CH'+current.ch+' HCS-BTA';
+}
+async function setRate(){
+  state.rate=Number(els.rate.value)||1000;const ticks=Math.max(1,Math.round(1000000/state.rate));
+  ack(await send(CMD.SET_PERIOD,[0xFF,0,0,0,0,...u32(ticks)]),'Nastavení frekvence');
+}
+async function start(clear=true){
+  if(clear){state.u=[];state.i=[];state.uIndex=0;state.iIndex=0;state.iOffset=0;state.unknown=0;state.interleavePhase=0;els.diag.textContent='—'}
+  await setRate();ack(await send(CMD.START,[]),'Start měření');state.measuring=true;
+  els.pause.disabled=false;els.zeroI.disabled=false;setStatus('měřím','ok');update();
+}
+async function stop(){if(!state.usb||!state.measuring)return;try{ack(await send(CMD.STOP,[]),'Stop měření')}catch(e){console.warn(e)}state.measuring=false}
+async function changeRate(){
+  if(!state.usb)return;
+  try{const was=state.measuring;if(was)await stop();state.u=[];state.i=[];state.uIndex=0;state.iIndex=0;state.interleavePhase=0;if(was)await start(false);else await setRate()}
+  catch(e){console.error(e);setStatus('změna frekvence selhala','err')}
+}
+async function connect(){
+  if(!navigator.usb){alert('Použij Chrome nebo Edge s podporou WebUSB.');return}
+  els.connect.disabled=true;setStatus('připojuji…');
+  try{
+    const granted=await navigator.usb.getDevices().catch(()=>[]);let d=granted.find(x=>x.vendorId===VID&&x.productId===PID);
+    if(!d)d=await navigator.usb.requestDevice({filters:[{vendorId:VID,productId:PID}]});
+    if(!d)throw new DOMException('Nebylo vybráno zařízení.','NotFoundError');
+    if(!d.opened)await d.open();if(!d.configuration||d.configuration.configurationValue!==1)await d.selectConfiguration(1);await d.reset().catch(()=>{});
+    const intf=pickInterface(d.configuration);if(!intf)throw new Error('LabQuest Mini neposkytl použitelné USB rozhraní.');
+    state.interfaceNumber=intf.interfaceNumber;await d.claimInterface(state.interfaceNumber);
+    const ep=intf.alternate?.endpoints||[],inn=ep.find(e=>e.direction==='in'&&e.type==='bulk')||ep.find(e=>e.direction==='in'),out=ep.find(e=>e.direction==='out'&&e.type==='bulk')||ep.find(e=>e.direction==='out');
+    if(!inn||!out)throw new Error('Nenalezeny USB endpointy.');
+    state.usb=d;state.inEndpoint=inn.endpointNumber;state.outEndpoint=out.endpointNumber;state.counter=0;state.reading=true;state.pending.clear();void readLoop();
+    setStatus('hledám oba senzory…');await identifySensors();els.disconnect.disabled=false;await start(true);els.connect.textContent='Připojeno';
+  }catch(e){
+    console.error(e);const cancelled=e?.name==='NotFoundError'||/cancel/i.test(String(e));
+    if(!cancelled)alert(e?.message||String(e));await disconnect(true);setStatus(cancelled?'výběr zrušen':'chyba',cancelled?'':'err');
+  }finally{els.connect.disabled=!!state.usb;if(!state.usb)els.connect.textContent='Připojit'}
+}
+async function disconnect(silent=false){
+  const d=state.usb;if(d){try{if(state.measuring)await stop()}catch(_){}
+    state.reading=false;for(const p of state.pending.values()){clearTimeout(p.timer);p.reject?.(new Error('Odpojeno'))}state.pending.clear();
+    try{await d.releaseInterface(state.interfaceNumber)}catch(_){}try{await d.close()}catch(_){}
+  }
+  state.usb=null;state.reading=false;state.measuring=false;state.voltageCh=null;state.currentCh=null;state.u=[];state.i=[];state.uIndex=0;state.iIndex=0;state.paused=false;
+  els.connect.disabled=false;els.connect.textContent='Připojit';els.disconnect.disabled=true;els.pause.disabled=true;els.pause.textContent='Pauza';els.zeroI.disabled=true;els.device.textContent='';
+  if(!silent)setStatus('nepřipojen');update();
+}
+
+function pairs(){
+  const out=[];let a=0,b=0;
+  while(a<state.u.length&&b<state.i.length){
+    const U=state.u[a],I=state.i[b];
+    if(U.idx===I.idx){out.push({idx:U.idx,t:U.t,u:U.v,i:I.v});a++;b++}
+    else if(U.idx<I.idx)a++;else b++;
+  }
+  return out;
+}
+function currentPairs(){
+  const p=pairs(),dur=Number(els.window.value)||.2;if(!p.length)return [];
+  const end=p[p.length-1].t,start=end-dur;let k=p.length-1;while(k>0&&p[k-1].t>=start)k--;return p.slice(k);
+}
+function median(a){if(!a.length)return NaN;const s=[...a].sort((x,y)=>x-y),m=Math.floor(s.length/2);return s.length%2?s[m]:(s[m-1]+s[m])/2}
+function frequencyOf(data,key){
+  if(data.length<4)return NaN;const vals=data.map(x=>x[key]),dc=vals.reduce((a,b)=>a+b,0)/vals.length,pp=Math.max(...vals)-Math.min(...vals);if(pp<1e-4)return NaN;
+  const h=Math.max(pp*.03,1e-5),cross=[];let armed=false;
+  for(let k=1;k<data.length;k++){const y0=data[k-1][key]-dc,y1=data[k][key]-dc;if(y0<-h)armed=true;if(armed&&y0<=0&&y1>0){const dt=data[k].t-data[k-1].t;cross.push(data[k-1].t+(0-y0)/(y1-y0)*dt);armed=false}}
+  if(cross.length<2)return NaN;const ps=[];for(let k=1;k<cross.length;k++){const q=cross[k]-cross[k-1];if(q>0)ps.push(q)}const T=median(ps);return Number.isFinite(T)&&T>0?1/T:NaN;
+}
+function harmonicPhase(data,key,f,mean){
+  let c=0,s=0;const w=2*Math.PI*f;for(const p of data){const x=p[key]-mean;c+=x*Math.cos(w*p.t);s+=x*Math.sin(w*p.t)}return Math.atan2(-s,c);
+}
+function wrapPi(x){while(x>Math.PI)x-=2*Math.PI;while(x<=-Math.PI)x+=2*Math.PI;return x}
+function analyse(data){
+  if(data.length<6)return null;const n=data.length;
+  const u0=data.reduce((a,p)=>a+p.u,0)/n,i0=data.reduce((a,p)=>a+p.i,0)/n;
+  const urms=Math.sqrt(data.reduce((a,p)=>a+p.u*p.u,0)/n),irms=Math.sqrt(data.reduce((a,p)=>a+p.i*p.i,0)/n);
+  const P=data.reduce((a,p)=>a+p.u*p.i,0)/n,S=urms*irms,pf=S>1e-9?P/S:NaN;
+  const f=frequencyOf(data,'u')||frequencyOf(data,'i');let phi=NaN,cosphi=NaN,Q=NaN;
+  if(Number.isFinite(f)&&f>0){const pu=harmonicPhase(data,'u',f,u0),pi=harmonicPhase(data,'i',f,i0);phi=wrapPi(pu-pi);cosphi=Math.cos(phi);Q=S*Math.sin(phi)}
+  return {urms,irms,P,S,pf,f,phi,cosphi,Q};
+}
+function triggered(){
+  const all=pairs(),dur=Number(els.window.value)||.2;if(all.length<6)return {data:currentPairs(),start:null,trigger:false};
+  const end=all[all.length-1].t,recent=all.filter(p=>p.t>=end-Math.max(dur*2.5,.25));if(recent.length<6)return {data:currentPairs(),start:null,trigger:false};
+  const mean=recent.reduce((a,p)=>a+p.u,0)/recent.length;let trig=NaN;
+  for(let k=1;k<recent.length;k++){const a=recent[k-1],b=recent[k];if(a.u<=mean&&b.u>mean&&b.u!==a.u){const t=a.t+(mean-a.u)/(b.u-a.u)*(b.t-a.t);if(t+dur<=end+1.5/state.rate)trig=t}}
+  if(!Number.isFinite(trig))return {data:currentPairs(),start:null,trigger:false};
+  return {data:all.filter(p=>p.t>=trig-1/state.rate&&p.t<=trig+dur+1/state.rate),start:trig,trigger:true};
+}
+function updateMetrics(){
+  const a=analyse(currentPairs());const keys=['urms','irms','power','apparent','reactive','pf','phase','freq','period','cosphi'];
+  if(!a){for(const k of keys)els[k].textContent='—';els.phaseLabel.textContent='φ = —';return}
+  els.urms.textContent=fmt(a.urms,a.urms<1?3:2);els.irms.textContent=fmt(a.irms,a.irms<1?3:2);els.power.textContent=fmt(a.P,2);els.apparent.textContent=fmt(a.S,2);
+  els.reactive.textContent=fmt(a.Q,2);els.pf.textContent=fmt(a.pf,3);els.freq.textContent=fmt(a.f,a.f<10?2:1);els.period.textContent=Number.isFinite(a.f)?fmt(1000/a.f,1):'—';
+  const deg=Number.isFinite(a.phi)?a.phi*180/Math.PI:NaN;els.phase.textContent=fmt(deg,1);els.cosphi.textContent=fmt(a.cosphi,3);els.phaseLabel.textContent=Number.isFinite(deg)?'φ = '+fmt(deg,1)+'°':'φ = —';
+}
+function resize(){const r=els.canvas.getBoundingClientRect(),d=Math.min(devicePixelRatio||1,2),w=Math.max(1,Math.round(r.width*d)),h=Math.max(1,Math.round(r.height*d));if(els.canvas.width!==w||els.canvas.height!==h){els.canvas.width=w;els.canvas.height=h}return {w,h,d}}
+function draw(){
+  const {w,h,d}=resize();ctx.clearRect(0,0,w,h);ctx.fillStyle='#fff';ctx.fillRect(0,0,w,h);
+  const L=56*d,R=56*d,T=18*d,B=30*d,W=w-L-R,H=h-T-B,disp=triggered(),data=disp.data,dur=Number(els.window.value)||.2;
+  const end=data.length?data[data.length-1].t:dur,start=disp.trigger?disp.start:end-dur;
+  let umax=1,imax=1;if(data.length){umax=Math.max(.1,...data.map(p=>Math.abs(p.u)))*1.12;imax=Math.max(.02,...data.map(p=>Math.abs(p.i)))*1.12}
+  const x=t=>L+(t-start)/dur*W,yU=v=>T+(1-v/umax)*H/2,yI=v=>T+(1-v/imax)*H/2;
+  ctx.strokeStyle='#e2e8f0';ctx.lineWidth=d;
+  for(let k=0;k<=10;k++){const xx=L+W*k/10;ctx.beginPath();ctx.moveTo(xx,T);ctx.lineTo(xx,T+H);ctx.stroke()}
+  for(let k=0;k<=8;k++){const yy=T+H*k/8;ctx.beginPath();ctx.moveTo(L,yy);ctx.lineTo(L+W,yy);ctx.stroke()}
+  const y0=T+H/2;ctx.strokeStyle='#94a3b8';ctx.lineWidth=1.4*d;ctx.beginPath();ctx.moveTo(L,y0);ctx.lineTo(L+W,y0);ctx.stroke();
+  ctx.font=(11*d)+'px system-ui';ctx.textBaseline='middle';ctx.fillStyle='#2563eb';ctx.textAlign='right';ctx.fillText(fmt(umax,umax<2?2:1)+' V',L-6*d,T);ctx.fillText('0 V',L-6*d,y0);ctx.fillText(fmt(-umax,umax<2?2:1)+' V',L-6*d,T+H);
+  ctx.fillStyle='#ea580c';ctx.textAlign='left';ctx.fillText(fmt(imax,imax<2?2:1)+' A',L+W+6*d,T);ctx.fillText('0 A',L+W+6*d,y0);ctx.fillText(fmt(-imax,imax<2?2:1)+' A',L+W+6*d,T+H);
+  ctx.fillStyle='#667085';ctx.textAlign='center';ctx.textBaseline='top';for(let k=0;k<=5;k++){const sec=dur*k/5;ctx.fillText(fmt(sec,dur<1?2:1)+' s',L+W*k/5,T+H+6*d)}
+  function trace(key,y,color){if(data.length<2)return;ctx.strokeStyle=color;ctx.lineWidth=2*d;ctx.lineJoin='round';ctx.beginPath();let begun=false;const maxDraw=Math.max(1200,Math.floor(W/d)*3),step=Math.max(1,Math.ceil(data.length/maxDraw));for(let k=0;k<data.length;k+=step){const p=data[k],xx=x(p.t);if(xx<L-2*d||xx>L+W+2*d)continue;const yy=y(p[key]);if(!begun){ctx.moveTo(xx,yy);begun=true}else ctx.lineTo(xx,yy)}ctx.stroke()}
+  trace('u',yU,'#2563eb');trace('i',yI,'#ea580c');
+
+  const a=analyse(data);
+  if(a&&Number.isFinite(a.f)&&Number.isFinite(a.phi)&&Math.abs(a.phi)>.01){
+    const dt=a.phi/(2*Math.PI*a.f),meanU=data.reduce((s,p)=>s+p.u,0)/data.length;let uCross=NaN;
+    for(let k=1;k<data.length;k++){const p0=data[k-1],p1=data[k];if(p0.u<=meanU&&p1.u>meanU){const q=p0.t+(meanU-p0.u)/(p1.u-p0.u)*(p1.t-p0.t);if(q>start+.08*dur&&q<start+.82*dur){uCross=q;break}}}
+    if(Number.isFinite(uCross)){const iCross=uCross+dt,x1=x(uCross),x2=x(iCross),yy=T+18*d;ctx.save();ctx.setLineDash([5*d,4*d]);ctx.strokeStyle='#64748b';ctx.lineWidth=d;for(const xx of [x1,x2]){ctx.beginPath();ctx.moveTo(xx,T);ctx.lineTo(xx,T+H);ctx.stroke()}ctx.setLineDash([]);ctx.beginPath();ctx.moveTo(x1,yy);ctx.lineTo(x2,yy);ctx.stroke();ctx.beginPath();ctx.moveTo(x1,yy-4*d);ctx.lineTo(x1,yy+4*d);ctx.moveTo(x2,yy-4*d);ctx.lineTo(x2,yy+4*d);ctx.stroke();ctx.fillStyle='#475467';ctx.textAlign='center';ctx.textBaseline='bottom';ctx.fillText('φ '+fmt(a.phi*180/Math.PI,1)+'°',(x1+x2)/2,yy-3*d);ctx.restore()}
+  }
+  ctx.strokeStyle='#cbd5e1';ctx.lineWidth=d;ctx.strokeRect(L,T,W,H);els.empty.style.display=data.length?'none':'flex';
+}
+function update(){updateMetrics();draw()}
+
+els.connect.addEventListener('click',connect);els.disconnect.addEventListener('click',()=>disconnect(false));els.rate.addEventListener('change',changeRate);els.window.addEventListener('change',update);
+els.pause.addEventListener('click',()=>{state.paused=!state.paused;els.pause.textContent=state.paused?'Pokračovat':'Pauza'});
+els.zeroI.addEventListener('click',()=>{const d=currentPairs();if(!d.length)return;const mean=d.reduce((a,p)=>a+p.i,0)/d.length;state.iOffset+=mean;state.i=state.i.map(p=>({...p,v:p.v-mean}));update()});
+els.fullscreen.addEventListener('click',async()=>{try{if(!document.fullscreenElement)await $('scopeCard').requestFullscreen();else await document.exitFullscreen()}catch(_){}});
+new ResizeObserver(draw).observe(els.canvasWrap);document.addEventListener('fullscreenchange',()=>setTimeout(draw,30));
+if(!navigator.usb){els.connect.disabled=true;setStatus('WebUSB není podporováno','err')}
+update();
+})();
+</script>
+</body>
+</html>
