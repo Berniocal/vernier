@@ -30,14 +30,6 @@ button:disabled{opacity:.42;cursor:not-allowed}
 .controls button{flex:1;min-width:120px}
 .controls label{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:.8rem}
 .controls select{border:1px solid var(--line);border-radius:8px;background:#fff;padding:6px 8px}
-.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
-.panel{background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px;min-width:0}
-.panel h2{font-size:1rem;margin:0 0 8px}
-.row{display:grid;grid-template-columns:130px 1fr;gap:8px;padding:5px 0;border-bottom:1px solid #eef2f6;font-size:.84rem}
-.row:last-child{border-bottom:0}
-.row span:first-child{color:var(--muted)}
-.log{height:210px;overflow:auto;background:#0f172a;color:#dbeafe;border-radius:10px;padding:9px;font:12px/1.45 ui-monospace,SFMono-Regular,Consolas,monospace;white-space:pre-wrap}
-.note{margin-top:10px;padding:10px 12px;background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;border-radius:12px;font-size:.82rem;line-height:1.45}
 @media(max-width:680px){
   .app{width:calc(100% - 10px);padding:7px 0 18px}
   header{margin-bottom:7px}
@@ -45,7 +37,6 @@ button:disabled{opacity:.42;cursor:not-allowed}
   header button{padding:6px 8px;font-size:.74rem}
   .big{min-height:175px;padding:12px}
   .value{font-size:clamp(4rem,22vw,6.5rem)}
-  .grid{grid-template-columns:1fr}
   .controls{padding:6px;gap:4px}
   .controls button{min-width:0;padding:6px 5px;font-size:.76rem}
   .controls label{width:100%;justify-content:center}
@@ -91,29 +82,6 @@ button:disabled{opacity:.42;cursor:not-allowed}
       </label>
     </div>
   </section>
-
-  <div class="grid">
-    <section class="panel">
-      <h2>Zařízení</h2>
-      <div class="row"><span>Vendor ID</span><span id="vid">—</span></div>
-      <div class="row"><span>Product ID</span><span id="pid">—</span></div>
-      <div class="row"><span>Typ</span><span id="type">—</span></div>
-      <div class="row"><span>Sensor ID</span><span id="sensorId">—</span></div>
-      <div class="row"><span>Čidlo</span><span id="sensorName">—</span></div>
-      <div class="row"><span>Jednotka</span><span id="sensorUnit">—</span></div>
-      <div class="row"><span>Kalibrace</span><span id="calibration">—</span></div>
-      <div class="row"><span>DDS paměť</span><span id="ddsStatus">—</span></div>
-      <div class="row"><span>Report ID OUT</span><span id="outReport">—</span></div>
-      <div class="row"><span>Počet vzorků</span><span id="count">0</span></div>
-    </section>
-
-    <section class="panel">
-      <h2>Diagnostika</h2>
-      <div id="log" class="log"></div>
-    </section>
-  </div>
-
-  <div class="note"><b>Experimentální verze:</b> u chytrých BTA čidel (Sensor ID ≥ 20) aplikace načte přímo z čidla jeho 128bajtový DDS záznam, název, jednotku a kalibraci. Pokud se DDS nepodaří přečíst nebo jde o starší nechytré čidlo, zůstane zobrazení v RAW.</div>
 </div>
 
 <script>
@@ -138,12 +106,11 @@ const state={
 };
 
 const els={};
-for(const id of ['connect','disconnect','start','stop','zero','period','status','deviceName','deviceMeta','value','unit','vid','pid','type','sensorId','sensorName','sensorUnit','calibration','ddsStatus','outReport','count','log']) els[id]=document.getElementById(id);
+for(const id of ['connect','disconnect','start','stop','zero','period','status','deviceName','deviceMeta','value','unit']) els[id]=document.getElementById(id);
 
 function log(msg){
   const t=new Date().toLocaleTimeString('cs-CZ');
-  els.log.textContent+=`[${t}] ${msg}\n`;
-  els.log.scrollTop=els.log.scrollHeight;
+  console.log(`[${t}] ${msg}`);
 }
 
 function setStatus(text,type=''){
@@ -282,7 +249,6 @@ function physicalValue(raw){
 function acceptRaw(raw,note=''){
   state.lastRaw=raw;
   state.count++;
-  els.count.textContent=String(state.count);
 
   if(state.dds){
     const value=physicalValue(raw);
@@ -451,10 +417,6 @@ async function configureSmartSensor(dds){
 function showDDS(dds){
   const page=dds.pages[dds.activePage]||dds.pages[0];
   const unit=cleanUnit(page.unit);
-  els.sensorName.textContent=dds.longName||dds.shortName||('Sensor '+dds.sensorNumber);
-  els.sensorUnit.textContent=unit||'—';
-  els.calibration.textContent=equationName(dds.equation);
-  els.ddsStatus.textContent=(dds.checksum.exact?'OK':'OK (legacy checksum)')+' · v'+dds.memMapVersion;
   els.unit.textContent=unit||'RAW';
   els.deviceMeta.textContent=(dds.longName||dds.shortName||'BTA čidlo')+
     (Number.isFinite(dds.minSamplePeriod)?' · min. '+Math.round(dds.minSamplePeriod*1000)+' ms':'');
@@ -473,10 +435,6 @@ async function initDevice(){
 
   state.sensorId=null;
   state.dds=null;
-  els.sensorName.textContent='—';
-  els.sensorUnit.textContent='—';
-  els.calibration.textContent='—';
-  els.ddsStatus.textContent='—';
   els.unit.textContent='RAW';
 
   if(state.info.kind==='link'){
@@ -486,7 +444,6 @@ async function initDevice(){
         const dv=new DataView(r.buffer,r.byteOffset,r.byteLength);
         const id=dv.getUint32(2,true);
         state.sensorId=id;
-        els.sensorId.textContent=String(id)+' ('+hex(id,8)+')';
         log('Sensor ID: '+id);
 
         if(id>=20 && id<=255){
@@ -497,11 +454,9 @@ async function initDevice(){
             await configureSmartSensor(dds);
           }catch(ddsErr){
             state.dds=null;
-            els.ddsStatus.textContent='chyba';
             log('DDS se nepodařilo načíst: '+ddsErr.message);
           }
         }else{
-          els.ddsStatus.textContent='bez DDS';
           log('Sensor ID '+id+' je nechytré čidlo; zatím zůstávám v RAW.');
         }
       }
@@ -537,7 +492,7 @@ async function startMeasurement(){
     await setPeriod();
     await command(CMD.START);
     state.measuring=true;
-    state.count=0;els.count.textContent='0';els.value.textContent='—';
+    state.count=0;els.value.textContent='—';
     els.stop.disabled=false;els.zero.disabled=false;
     setStatus('měřím','ok');
     log('START OK');
@@ -586,10 +541,6 @@ async function connect(){
 
     els.deviceName.textContent=state.info.name;
     els.deviceMeta.textContent=device.productName||'Vernier USB HID';
-    els.vid.textContent=hex(device.vendorId);
-    els.pid.textContent=hex(device.productId);
-    els.type.textContent=state.info.name;
-    els.outReport.textContent=String(state.outReportId);
     els.period.value=String(state.info.defaultMs);
     if(![...els.period.options].some(o=>o.value===els.period.value)){
       const o=document.createElement('option');o.value=String(state.info.defaultMs);o.textContent=state.info.defaultMs+' ms';els.period.prepend(o);els.period.value=o.value;
@@ -619,8 +570,7 @@ async function disconnect(){
   state.device=null;state.info=null;state.pending.clear();state.count=0;state.offset=0;state.lastRaw=NaN;state.lastValue=NaN;state.measuring=false;state.sensorId=null;state.dds=null;state.readingDDS=false;
   els.connect.disabled=false;els.disconnect.disabled=true;els.start.disabled=true;els.stop.disabled=true;els.zero.disabled=true;els.period.disabled=true;
   els.deviceName.textContent='—';els.deviceMeta.textContent='Podporované testovací typy: Go!Link, Go!Temp, Go!Motion.';
-  for(const id of ['vid','pid','type','sensorId','sensorName','sensorUnit','calibration','ddsStatus','outReport'])els[id].textContent='—';
-  els.count.textContent='0';els.value.textContent='—';els.unit.textContent='RAW';setStatus('nepřipojen');
+  els.value.textContent='—';els.unit.textContent='RAW';setStatus('nepřipojen');
   log('Odpojeno');
 }
 
