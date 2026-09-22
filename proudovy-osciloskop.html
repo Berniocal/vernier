@@ -50,6 +50,11 @@ canvas{display:block;width:100%;height:100%}
 .metric .val{font-size:1.12rem;font-weight:780;margin-top:2px;white-space:nowrap;font-variant-numeric:tabular-nums}
 .metric .u{font-size:.7rem;color:var(--muted);margin-left:2px}
 .info{font-size:.73rem;line-height:1.4;color:var(--muted);padding:2px 3px}
+.diag{border-top:1px solid var(--line);padding-top:8px;margin-top:2px}
+.diag-title{font-size:.72rem;font-weight:750;margin-bottom:5px}
+.diag-note{font-size:.68rem;line-height:1.35;color:#b45309;margin-bottom:5px}
+.diag pre{margin:0;white-space:pre-wrap;word-break:break-all;font:10px/1.35 ui-monospace,SFMono-Regular,Consolas,monospace;color:#475467;max-height:180px;overflow:auto}
+.diag button{margin-top:6px;padding:5px 8px;font-size:.7rem}
 .safety{margin-top:10px;padding:10px 12px;border-radius:12px;background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;font-size:.8rem;line-height:1.4}
 @media(max-width:900px){
   .layout{grid-template-columns:1fr}
@@ -159,6 +164,12 @@ canvas{display:block;width:100%;height:100%}
         <div class="metric"><div class="label">Perioda</div><div class="val"><span id="periodOut">—</span><span class="u"> ms</span></div></div>
       </div>
       <div id="sensorInfo" class="info">Rozsah HCS-BTA: ±10 A. Po připojení aplikace vyhledá analogový kanál a pokusí se načíst kalibraci ze senzoru.</div>
+      <div class="diag">
+        <div class="diag-title">Diagnostika LabQuest Mini</div>
+        <div class="diag-note">Aktuální průběh je zjevně chybně dekódovaný. Níže ukládám první skutečné datové pakety, podle kterých opravíme formát.</div>
+        <pre id="diagText">čekám na datové pakety…</pre>
+        <button id="copyDiag">Kopírovat diagnostiku</button>
+      </div>
     </aside>
   </div>
 
@@ -183,7 +194,7 @@ const state={
   usb:null,interfaceNumber:0,inEndpoint:0,outEndpoint:0,reading:false,counter:0,
   pending:new Map(),channel:null,sensorId:0,dds:null,analogInput:0,
   measuring:false,paused:false,samples:[],sampleIndex:0,rate:1000,
-  zeroOffset:0,maxSamples:120000,lastDraw:0,unknownFrames:0
+  zeroOffset:0,maxSamples:120000,lastDraw:0,unknownFrames:0,diagFrames:[]
 };
 
 const $=id=>document.getElementById(id);
@@ -192,7 +203,8 @@ const els={
   fullscreen:$('fullscreen'),window:$('window'),rate:$('rate'),status:$('status'),
   deviceLabel:$('deviceLabel'),sensorInfo:$('sensorInfo'),canvas:$('scope'),
   canvasWrap:$('canvasWrap'),empty:$('empty'),rms:$('rms'),amp:$('amp'),
-  freq:$('freq'),periodOut:$('periodOut'),triggerState:$('triggerState')
+  freq:$('freq'),periodOut:$('periodOut'),triggerState:$('triggerState'),
+  diagText:$('diagText'),copyDiag:$('copyDiag')
 };
 const ctx=els.canvas.getContext('2d');
 
@@ -213,6 +225,30 @@ function u32le(v){return [v&255,(v>>>8)&255,(v>>>16)&255,(v>>>24)&255]}
 function readU32(b,o=0){return ((b[o]||0)|((b[o+1]||0)<<8)|((b[o+2]||0)<<16)|((b[o+3]||0)<<24))>>>0}
 function readI32(b,o=0){return readU32(b,o)|0}
 function readI16(b,o=0){const v=(b[o]||0)|((b[o+1]||0)<<8);return v&0x8000?v-0x10000:v}
+function updateDiag(){
+  if(!state.diagFrames.length){els.diagText.textContent='čekám na datové pakety…';return}
+  const lines=[];
+  state.diagFrames.forEach((f,idx)=>{
+    const p=f.payload, count=p.length>=4?p[3]:null, body=p.length>=4?p.subarray(4):new Uint8Array();
+    lines.push('#'+(idx+1)+' frame: '+hex(f.frame));
+    lines.push(' payload: '+hex(p)+' | count='+count+' | body='+body.length+' B');
+    if(body.length>=6){
+      const chunks=[];
+      for(let o=0;o+5<body.length&&chunks.length<5;o+=6){
+        chunks.push(
+          '['+Array.from(body.slice(o,o+6)).map(x=>x.toString(16).padStart(2,'0')).join(' ')+']'+
+          ' b0='+body[o]+' b1='+body[o+1]+
+          ' i16@0='+readI16(body,o)+
+          ' i16@2='+readI16(body,o+2)+
+          ' i16@4='+readI16(body,o+4)+
+          ' i32@2='+readI32(body,o+2)
+        );
+      }
+      lines.push(' rec6: '+chunks.join(' | '));
+    }
+  });
+  els.diagText.textContent=lines.join('\n');
+}
 
 function nextCounter(){
   state.counter=(state.counter+255)&255;
@@ -395,6 +431,10 @@ function acceptRaw(raw){
   if(now-state.lastDraw>45){state.lastDraw=now;updateUI()}
 }
 function handleMeasurement(packet){
+  if(state.diagFrames.length<6){
+    state.diagFrames.push({frame:packet.frame.slice(),payload:packet.payload.slice()});
+    updateDiag();
+  }
   const values=decodeAnalogPayload(packet.payload);
   if(!values.length){
     state.unknownFrames++;
@@ -537,7 +577,7 @@ async function connect(){
 
     state.usb=device;state.inEndpoint=incoming.endpointNumber;state.outEndpoint=outgoing.endpointNumber;
     state.counter=0;state.reading=true;state.pending.clear();state.channel=null;
-    state.samples=[];state.sampleIndex=0;state.zeroOffset=0;state.unknownFrames=0;
+    state.samples=[];state.sampleIndex=0;state.zeroOffset=0;state.unknownFrames=0;state.diagFrames=[];updateDiag();
     void readLoop();
 
     setStatus('identifikuji čidlo…');
@@ -568,7 +608,7 @@ async function disconnect(silent=false){
     try{await d.close()}catch(_){}
   }
   state.usb=null;state.reading=false;state.measuring=false;state.channel=null;state.dds=null;
-  state.samples=[];state.sampleIndex=0;state.zeroOffset=0;state.paused=false;
+  state.samples=[];state.sampleIndex=0;state.zeroOffset=0;state.paused=false;state.diagFrames=[];updateDiag();
   els.connect.disabled=false;els.connect.textContent='Připojit';els.disconnect.disabled=true;
   els.pause.disabled=true;els.pause.textContent='Pauza';els.zero.disabled=true;
   els.deviceLabel.textContent='';els.triggerState.textContent='· auto trigger';
@@ -723,6 +763,13 @@ els.zero.addEventListener('click',()=>{
   state.zeroOffset+=mean;
   state.samples=state.samples.map(p=>({t:p.t,v:p.v-mean}));
   updateUI();
+});
+els.copyDiag.addEventListener('click',async()=>{
+  try{
+    await navigator.clipboard.writeText(els.diagText.textContent||'');
+    const old=els.copyDiag.textContent;els.copyDiag.textContent='Zkopírováno';
+    setTimeout(()=>els.copyDiag.textContent=old,1200);
+  }catch(_){}
 });
 els.fullscreen.addEventListener('click',async()=>{
   try{
