@@ -318,10 +318,13 @@ function calibration(){
   return {slope:p.b,intercept:p.a,unit:unit||'V',source:'DDS'};
 }
 function rawToVolts(raw){
+  // NGIO vrací kalibrovanou ADC hodnotu jako unsigned 16bit 0…65535.
+  // Pro 5V rozsah: 0 -> 0 V, 32768 -> 2,5 V.
+  // Pro ±10V rozsah: 0 -> -10 V, 32768 -> 0 V.
   if(state.analogInput===4){
-    return raw*(10/2048);
+    return raw*(20/65536)-10;
   }
-  return raw*(2.5/2048)+2.5;
+  return raw*(5/65536);
 }
 function rawToMeasuredVoltage(raw){
   const volts=rawToVolts(raw);
@@ -329,19 +332,19 @@ function rawToMeasuredVoltage(raw){
   return cal.slope*volts+cal.intercept;
 }
 
-function plausibleRaw(v){return Number.isFinite(v)&&v>=-2048&&v<=2047}
+function plausibleRaw(v){return Number.isFinite(v)&&v>=0&&v<=65535}
 function decodeAnalogPayload(payload){
+  // Reálný analogový periodic snapshot LabQuest Mini:
+  // payload = [00 00 02 count | count × uint16 LE raw].
+  // Při jednom povoleném analogovém kanálu v paketu NENÍ číslo kanálu;
+  // každé 2 bajty jsou přímo jeden unsigned 16bit ADC vzorek 0…65535.
   if(payload.length<4)return [];
   const count=payload[3];
   const body=payload.subarray(4);
   if(!count||body.length<count*2)return [];
   const out=[];
   for(let i=0;i<count;i++){
-    const word=(body[i*2]||0)|((body[i*2+1]||0)<<8);
-    const channel=(word>>>12)&0x0f;
-    let raw=word&0x0fff;
-    if(raw&0x0800)raw-=0x1000;
-    if(channel===state.channel)out.push(raw);
+    out.push((body[i*2]||0)|((body[i*2+1]||0)<<8));
   }
   return out;
 }
