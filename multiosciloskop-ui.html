@@ -146,6 +146,7 @@ function checksum(a){let s=0;for(const b of a)s=(s+b)&255;return s}
 function u32(v){return [v&255,(v>>>8)&255,(v>>>16)&255,(v>>>24)&255]}
 function rU32(b,o=0){return ((b[o]||0)|((b[o+1]||0)<<8)|((b[o+2]||0)<<16)|((b[o+3]||0)<<24))>>>0}
 function rI32(b,o=0){return rU32(b,o)|0}
+function rI16(b,o=0){const v=(b[o]||0)|((b[o+1]||0)<<8);return v&0x8000?v-0x10000:v}
 function hex(b){return Array.from(b).map(x=>x.toString(16).padStart(2,'0')).join(' ')}
 function nextCounter(){state.counter=(state.counter+255)&255;return state.counter}
 function encode(cmd,counter,params=[]){const len=5+params.length;const base=[LOCK.COMMAND,len,counter,cmd,...params];return Uint8Array.from([LOCK.COMMAND,len,counter,checksum(base),cmd,...params])}
@@ -200,10 +201,10 @@ function currentCalibration(){
   if(d&&d.equation===1&&p&&Number.isFinite(p.a)&&Number.isFinite(p.b))return {a:p.a,b:p.b,source:'DDS'};
   return {a:-11.31,b:4.51,source:'HCS-BTA'};
 }
-function rawToInputVolts(raw,pm10){return pm10?raw*(20/4095)-10:raw*(5/4095)}
+function rawToInputVolts(raw,pm10){return pm10?raw*(10/32768):raw*(2.5/32768)+2.5}
 function voltageValue(raw){return 3.206*rawToInputVolts(raw,true)}
 function currentValue(raw){const c=currentCalibration();return c.a+c.b*rawToInputVolts(raw,state.currentPM10)-state.iOffset}
-function plausible(v){return Number.isFinite(v)&&v>=0&&v<=4095}
+function plausible(v){return Number.isFinite(v)&&v>=-32768&&v<=32767}
 
 function decodeTagged(body){
   const channels=[state.voltageCh,state.currentCh].filter(Number.isFinite);
@@ -217,7 +218,7 @@ function decodeTagged(body){
         if(chPos===vPos||chPos===vPos+1)continue;
         const ev=[];let ok=true;
         for(let k=0;k<n;k++){
-          const base=k*size,ch=body[base+chPos],raw=body[base+vPos]|(body[base+vPos+1]<<8);
+          const base=k*size,ch=body[base+chPos],raw=rI16(body,base+vPos);
           if(!channels.includes(ch)||!plausible(raw)){ok=false;break}
           ev.push({ch,raw});
         }
@@ -252,7 +253,7 @@ function decodeMeasurement(payload){
   // Záloha pro firmware, který posílá jen 12bit hodnoty bez čísla kanálu:
   // předpokládá pevné pořadí povolených kanálů U, I, U, I...
   if(body.length>=4&&body.length%2===0){
-    const vals=[];for(let o=0;o<body.length;o+=2)vals.push(body[o]|(body[o+1]<<8));
+    const vals=[];for(let o=0;o<body.length;o+=2)vals.push(rI16(body,o));
     if(vals.every(plausible)){
       const order=[state.voltageCh,state.currentCh];
       return vals.map(raw=>{const ch=order[state.interleavePhase%2];state.interleavePhase++;return {ch,raw}});
