@@ -212,6 +212,7 @@ function sumChecksum(bytes){
 function u32le(v){return [v&255,(v>>>8)&255,(v>>>16)&255,(v>>>24)&255]}
 function readU32(b,o=0){return ((b[o]||0)|((b[o+1]||0)<<8)|((b[o+2]||0)<<16)|((b[o+3]||0)<<24))>>>0}
 function readI32(b,o=0){return readU32(b,o)|0}
+function readI16(b,o=0){const v=(b[o]||0)|((b[o+1]||0)<<8);return v&0x8000?v-0x10000:v}
 
 function nextCounter(){
   state.counter=(state.counter+255)&255;
@@ -317,10 +318,12 @@ function calibration(){
   return {slope:p.b,intercept:p.a,unit:unit||'A',source:'DDS'};
 }
 function rawToVolts(raw){
+  // Vernier NGIO/GoIO vrací analogová RAW data jako podepsanou hodnotu
+  // -32768…32767. Pro 5V vstup je střed rozsahu 2,5 V, pro ±10V je 0 V.
   if(state.analogInput===4){
-    return raw*(20/4095)-10;
+    return raw*(10/32768);
   }
-  return raw*(5/4095);
+  return raw*(2.5/32768)+2.5;
 }
 function rawToAmps(raw){
   const volts=rawToVolts(raw);
@@ -328,7 +331,7 @@ function rawToAmps(raw){
   return cal.slope*volts+cal.intercept;
 }
 
-function plausibleRaw(v){return Number.isFinite(v)&&v>=0&&v<=4095}
+function plausibleRaw(v){return Number.isFinite(v)&&v>=-32768&&v<=32767}
 function decodeAnalogPayload(payload){
   if(payload.length<6)return [];
   const count=payload[3];
@@ -344,20 +347,25 @@ function decodeAnalogPayload(payload){
   };
 
   if(body.length===count*2){
-    const a=[];for(let i=0;i<count;i++)a.push(body[i*2]|(body[i*2+1]<<8));add(a,'u16');
+    const a=[];for(let i=0;i<count;i++)a.push(readI16(body,i*2));add(a,'i16');
   }
   if(body.length===count*4){
     const a=[];for(let i=0;i<count;i++)a.push(readI32(body,i*4));add(a,'i32');
-    const b=[];for(let i=0;i<count;i++)b.push(body[i*4]|(body[i*4+1]<<8));add(b,'u16/4');
+    const b=[];for(let i=0;i<count;i++)b.push(readI16(body,i*4));add(b,'i16/4');
   }
 
   const rec=count?body.length/count:0;
+  if(rec===6){
+    for(const off of [2,0]){
+      const a=[];for(let i=0;i<count;i++)a.push(readI32(body,i*6+off));add(a,'record6-i32@'+off);
+    }
+  }
   if(Number.isInteger(rec)&&rec>=3&&rec<=10){
     for(let off=0;off<=rec-2;off++){
       const a=[];
       for(let i=0;i<count;i++){
         const p=i*rec+off;
-        a.push(body[p]|(body[p+1]<<8));
+        a.push(readI16(body,p));
       }
       add(a,'record'+rec+'@'+off);
     }
@@ -365,7 +373,7 @@ function decodeAnalogPayload(payload){
 
   if(!candidates.length&&body.length>=count*2){
     for(let start=0;start<=Math.min(8,body.length-count*2);start++){
-      const a=[];for(let i=0;i<count;i++){const p=start+i*2;a.push(body[p]|(body[p+1]<<8))}
+      const a=[];for(let i=0;i<count;i++){const p=start+i*2;a.push(readI16(body,p))}
       add(a,'scan@'+start);
     }
   }
