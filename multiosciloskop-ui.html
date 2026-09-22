@@ -201,65 +201,25 @@ function currentCalibration(){
   if(d&&d.equation===1&&p&&Number.isFinite(p.a)&&Number.isFinite(p.b))return {a:p.a,b:p.b,source:'DDS'};
   return {a:-11.31,b:4.51,source:'HCS-BTA'};
 }
-function rawToInputVolts(raw,pm10){return pm10?raw*(10/32768):raw*(2.5/32768)+2.5}
+function rawToInputVolts(raw,pm10){return pm10?raw*(10/2048):raw*(2.5/2048)+2.5}
 function voltageValue(raw){return 3.206*rawToInputVolts(raw,true)}
 function currentValue(raw){const c=currentCalibration();return c.a+c.b*rawToInputVolts(raw,state.currentPM10)-state.iOffset}
-function plausible(v){return Number.isFinite(v)&&v>=-32768&&v<=32767}
+function plausible(v){return Number.isFinite(v)&&v>=-2048&&v<=2047}
 
-function decodeTagged(body){
-  const channels=[state.voltageCh,state.currentCh].filter(Number.isFinite);
-  if(channels.length<2)return [];
-  const candidates=[];
-  for(let size=3;size<=8;size++){
-    if(body.length%size)continue;
-    const n=body.length/size;if(n<1||n>200)continue;
-    for(let chPos=0;chPos<size;chPos++){
-      for(let vPos=0;vPos<size-1;vPos++){
-        if(chPos===vPos||chPos===vPos+1)continue;
-        const ev=[];let ok=true;
-        for(let k=0;k<n;k++){
-          const base=k*size,ch=body[base+chPos],raw=rI16(body,base+vPos);
-          if(!channels.includes(ch)||!plausible(raw)){ok=false;break}
-          ev.push({ch,raw});
-        }
-        if(ok&&ev.length){
-          const unique=new Set(ev.map(x=>x.ch)).size;
-          candidates.push({ev,score:ev.length*10+unique*30-size});
-        }
-      }
-      if(size>=5){
-        for(let vPos=0;vPos<=size-4;vPos++){
-          if(chPos>=vPos&&chPos<=vPos+3)continue;
-          const ev=[];let ok=true;
-          for(let k=0;k<n;k++){
-            const base=k*size,ch=body[base+chPos],raw=rI32(body,base+vPos);
-            if(!channels.includes(ch)||!plausible(raw)){ok=false;break}
-            ev.push({ch,raw});
-          }
-          if(ok&&ev.length)candidates.push({ev,score:ev.length*9+new Set(ev.map(x=>x.ch)).size*30-size});
-        }
-      }
-    }
-  }
-  candidates.sort((a,b)=>b.score-a.score);
-  return candidates[0]?.ev||[];
-}
 function decodeMeasurement(payload){
-  if(payload.length<6)return [];
-  const body=payload.subarray(4);
-  let tagged=decodeTagged(body);
-  if(tagged.length)return tagged;
-
-  // Záloha pro firmware, který posílá jen 12bit hodnoty bez čísla kanálu:
-  // předpokládá pevné pořadí povolených kanálů U, I, U, I...
-  if(body.length>=4&&body.length%2===0){
-    const vals=[];for(let o=0;o<body.length;o+=2)vals.push(rI16(body,o));
-    if(vals.every(plausible)){
-      const order=[state.voltageCh,state.currentCh];
-      return vals.map(raw=>{const ch=order[state.interleavePhase%2];state.interleavePhase++;return {ch,raw}});
-    }
+  // Analogový periodic snapshot: 4b hlavička + count × 16bit LE.
+  // Horní nibble každého wordu = channel, spodních 12 bitů = signed ADC raw.
+  if(payload.length<4)return [];
+  const count=payload[3],body=payload.subarray(4),events=[];
+  if(!count||body.length<count*2)return events;
+  for(let i=0;i<count;i++){
+    const word=(body[i*2]||0)|((body[i*2+1]||0)<<8);
+    const ch=(word>>>12)&0x0f;
+    let raw=word&0x0fff;
+    if(raw&0x0800)raw-=0x1000;
+    if((ch===state.voltageCh||ch===state.currentCh)&&plausible(raw))events.push({ch,raw});
   }
-  return [];
+  return events;
 }
 function addSample(ch,raw){
   if(ch===state.voltageCh){
