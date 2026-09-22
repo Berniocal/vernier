@@ -319,9 +319,9 @@ function calibration(){
 }
 function rawToVolts(raw){
   if(state.analogInput===4){
-    return raw*(10/32768);
+    return raw*(10/2048);
   }
-  return raw*(2.5/32768)+2.5;
+  return raw*(2.5/2048)+2.5;
 }
 function rawToMeasuredVoltage(raw){
   const volts=rawToVolts(raw);
@@ -329,57 +329,22 @@ function rawToMeasuredVoltage(raw){
   return cal.slope*volts+cal.intercept;
 }
 
-function plausibleRaw(v){return Number.isFinite(v)&&v>=-32768&&v<=32767}
+function plausibleRaw(v){return Number.isFinite(v)&&v>=-2048&&v<=2047}
 function decodeAnalogPayload(payload){
-  if(payload.length<6)return [];
+  if(payload.length<4)return [];
   const count=payload[3];
-  if(!count||count>120)return [];
   const body=payload.subarray(4);
-  const candidates=[];
-
-  const add=(values,label)=>{
-    if(values.length!==count||!values.every(plausibleRaw))return;
-    const mid=values.reduce((a,b)=>a+b,0)/values.length;
-    const score=values.length*10-Math.abs(mid-2048)/4096;
-    candidates.push({values,score,label});
-  };
-
-  if(body.length===count*2){
-    const a=[];for(let i=0;i<count;i++)a.push(readI16(body,i*2));add(a,'i16');
+  if(!count||body.length<count*2)return [];
+  const out=[];
+  for(let i=0;i<count;i++){
+    const word=(body[i*2]||0)|((body[i*2+1]||0)<<8);
+    const channel=(word>>>12)&0x0f;
+    let raw=word&0x0fff;
+    if(raw&0x0800)raw-=0x1000;
+    if(channel===state.channel)out.push(raw);
   }
-  if(body.length===count*4){
-    const a=[];for(let i=0;i<count;i++)a.push(readI32(body,i*4));add(a,'i32');
-    const b=[];for(let i=0;i<count;i++)b.push(readI16(body,i*4));add(b,'i16/4');
-  }
-
-  const rec=count?body.length/count:0;
-  if(rec===6){
-    for(const off of [2,0]){
-      const a=[];for(let i=0;i<count;i++)a.push(readI32(body,i*6+off));add(a,'record6-i32@'+off);
-    }
-  }
-  if(Number.isInteger(rec)&&rec>=3&&rec<=10){
-    for(let off=0;off<=rec-2;off++){
-      const a=[];
-      for(let i=0;i<count;i++){
-        const p=i*rec+off;
-        a.push(readI16(body,p));
-      }
-      add(a,'record'+rec+'@'+off);
-    }
-  }
-
-  if(!candidates.length&&body.length>=count*2){
-    for(let start=0;start<=Math.min(8,body.length-count*2);start++){
-      const a=[];for(let i=0;i<count;i++){const p=start+i*2;a.push(readI16(body,p))}
-      add(a,'scan@'+start);
-    }
-  }
-
-  candidates.sort((a,b)=>b.score-a.score);
-  return candidates[0]?.values||[];
+  return out;
 }
-
 function acceptRaw(raw){
   if(!plausibleRaw(raw))return;
   const volts=rawToMeasuredVoltage(raw)-state.zeroOffset;
