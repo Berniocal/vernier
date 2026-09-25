@@ -138,7 +138,7 @@ function makeMeter(){
   metersEl.appendChild(card);
 
   const slot={
-    i:number-1,card,device:null,nativeDevice:null,sensor:null,raw:0,offset:0,hasValue:false,
+    i:number-1,card,device:null,sensor:null,raw:0,offset:0,hasValue:false,
     valueEl:card.querySelector('.value'),statusEl:card.querySelector('.status'),
     deviceEl:card.querySelector('.device'),connectBtn:card.querySelector('.connect'),
     zeroBtn:card.querySelector('.zero'),disconnectBtn:card.querySelector('.disconnect')
@@ -151,22 +151,6 @@ function makeMeter(){
   return slot;
 }
 
-async function selectNativeDevice(bluetooth){
-  if(bluetooth){
-    if(!navigator.bluetooth)throw new Error('Web Bluetooth není v tomto prohlížeči dostupný. Použij Chrome nebo Edge.');
-    return navigator.bluetooth.requestDevice({
-      filters:[{namePrefix:'GDX'}],
-      optionalServices:['d91714ef-28b9-4f91-ba16-f0d9a604f112']
-    });
-  }
-
-  if(!navigator.hid)throw new Error('USB přes WebHID není v tomto prohlížeči dostupné. Použij Chrome nebo Edge.');
-  const devices=await navigator.hid.requestDevice({
-    filters:[{vendorId:0x08f7,productId:0x0010}]
-  });
-  return devices[0]||null;
-}
-
 async function connect(slot){
   if(slot.device)return;
   slot.connectBtn.disabled=true;
@@ -176,28 +160,24 @@ async function connect(slot){
     if(!window.godirect)throw new Error('Nepodařilo se načíst knihovnu Vernier Go Direct.');
 
     const bluetooth=document.querySelector('input[name="type"]:checked').value==="1";
-    const nativeDevice=await selectNativeDevice(bluetooth);
-    if(!nativeDevice)throw new DOMException('Nebylo vybráno žádné zařízení.','NotFoundError');
 
-    if(slots.some(s=>s!==slot && s.nativeDevice===nativeDevice && s.device)){
-      throw new Error('Tento siloměr už je v aplikaci připojený.');
-    }
+    // Stejná cesta připojení jako u fungujícího Go Direct voltmetru.
+    const device=await godirect.selectDevice(bluetooth);
+    if(!device)throw new DOMException('Nebylo vybráno žádné zařízení.','NotFoundError');
 
-    const device=await godirect.createDevice(nativeDevice,{open:false,startMeasurements:false});
     slot.device=device;
-    slot.nativeDevice=nativeDevice;
-
     device.on('device-closed',()=>{
       if(slot.device===device)reset(slot,'odpojen');
     });
 
-    await device.open(false);
+    try{device.stop?.()}catch(_){}
 
     if(typeof device.enableDefaultSensors==='function')device.enableDefaultSensors();
 
     const force=findForceSensor(device);
     if(!force)throw new Error('Nebyl nalezen kanál síly.');
 
+    // U GDX-FOR necháme pro tento nástroj aktivní pouze sílu.
     for(const sensor of (device.sensors||[])){
       try{sensor.enabled=(sensor===force);}catch(_){}
     }
@@ -207,7 +187,7 @@ async function connect(slot){
     slot.raw=0;
     slot.offset=0;
     slot.hasValue=false;
-    slot.deviceEl.textContent=`${device.name||nativeDevice.productName||'Go Direct'} · ${force.name||'Force'}`;
+    slot.deviceEl.textContent=`${device.name||'Go Direct'} · ${force.name||'Force'}`;
 
     force.on('value-changed',sensor=>{
       const n=Number(sensor.value);
@@ -228,7 +208,6 @@ async function connect(slot){
     try{if(slot.device)await slot.device.close();}catch(_){}
 
     slot.device=null;
-    slot.nativeDevice=null;
     slot.sensor=null;
     slot.hasValue=false;
     slot.deviceEl.textContent='';
@@ -251,7 +230,7 @@ async function connect(slot){
 }
 
 function reset(slot,status='nepřipojen'){
-  slot.device=null;slot.nativeDevice=null;slot.sensor=null;slot.raw=0;slot.offset=0;slot.hasValue=false;
+  slot.device=null;slot.sensor=null;slot.raw=0;slot.offset=0;slot.hasValue=false;
   slot.valueEl.textContent='—';slot.deviceEl.textContent='';
   slot.connectBtn.disabled=false;slot.connectBtn.textContent='Připojit';
   slot.zeroBtn.disabled=true;slot.disconnectBtn.disabled=true;
@@ -285,9 +264,9 @@ if(!navigator.bluetooth){ble.disabled=true;bleLabel.classList.add('unsupported')
 if(!navigator.hid){usb.disabled=true;usbLabel.classList.add('unsupported');if(navigator.bluetooth)ble.checked=true;}
 
 document.querySelector('#support').textContent=
-  navigator.hid
-    ? 'USB: Chrome/Edge · připojuj každý siloměr zvlášť'
-    : 'USB není v tomto prohlížeči podporováno';
+  (!navigator.bluetooth || !navigator.hid)
+    ? `${navigator.bluetooth?'':'Bluetooth není podporováno'}${(!navigator.bluetooth&&!navigator.hid)?' · ':''}${navigator.hid?'':'USB není podporováno'}`
+    : '';
 
 makeMeter();makeMeter();makeMeter();
 })();
