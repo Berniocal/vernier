@@ -6,69 +6,43 @@
 <title>Vernier siloměry – rovnováha sil</title>
 <script src="https://unpkg.com/@vernier/godirect/dist/godirect.min.umd.js"></script>
 <style>
-:root{
-  --bg:#f4f5f7;--card:#fff;--text:#111827;--muted:#667085;--line:#d9dee7;
-}
+:root{--bg:#f4f5f7;--card:#fff;--text:#111827;--muted:#667085;--line:#d9dee7}
 *{box-sizing:border-box}
 html,body{margin:0;width:100%;min-height:100%;font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--text)}
-body{overflow-y:auto}
 button,input{font:inherit}
 .app{width:min(1180px,calc(100% - 28px));margin:0 auto;padding:18px 0 28px}
 header{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:14px;margin-bottom:12px}
 h1{margin:0;font-size:clamp(1.2rem,2vw,1.8rem);font-weight:800}
 .global{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
 .connection{display:flex;align-items:center;justify-content:center;gap:9px;color:var(--muted);font-size:.9rem}
-.transport-switch{display:inline-flex;align-items:center;gap:4px;padding:4px;background:#e8edf3;border:1px solid #d6dde7;border-radius:13px;box-shadow:inset 0 1px 2px rgba(15,23,42,.05)}
-.transport-option{position:relative;display:flex;align-items:center;gap:7px;min-width:112px;justify-content:center;padding:8px 13px;border-radius:9px;cursor:pointer;color:#475467;font-weight:750;line-height:1;transition:.15s ease;user-select:none}
-.transport-option:hover{background:rgba(255,255,255,.65);color:#111827}
+.transport-switch{display:inline-flex;align-items:center;gap:4px;padding:4px;background:#e8edf3;border:1px solid #d6dde7;border-radius:13px}
+.transport-option{position:relative;display:flex;align-items:center;gap:7px;min-width:112px;justify-content:center;padding:8px 13px;border-radius:9px;cursor:pointer;color:#475467;font-weight:750;line-height:1;user-select:none}
 .transport-option input{position:absolute;opacity:0;pointer-events:none}
 .transport-option:has(input:checked){background:#fff;color:#111827;box-shadow:0 1px 2px rgba(15,23,42,.12),0 3px 9px rgba(15,23,42,.08)}
-.transport-option:has(input:focus-visible){outline:3px solid rgba(37,99,235,.22);outline-offset:1px}
-.transport-option svg{width:18px;height:18px;flex:0 0 auto;stroke:currentColor}
+.transport-option svg{width:18px;height:18px;stroke:currentColor}
 .transport-option.unsupported{opacity:.38;cursor:not-allowed}
-.transport-option.unsupported:hover{background:transparent;color:#475467}
-.unsupported-note{color:#b42318;font-size:.72rem}
+#support{font-size:.72rem;color:#667085}
 button{border:1px solid var(--line);background:#fff;border-radius:10px;padding:8px 12px;cursor:pointer;font-weight:650;color:var(--text)}
 button:hover{background:#f8fafc}
 button:disabled{opacity:.42;cursor:not-allowed}
 .primary{background:#111827;color:#fff;border-color:#111827}
 .primary:hover{background:#1f2937}
-
 .meters{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
-.meter{
-  --meter-color:#2563eb;
-  height:245px;
-  background:var(--card);
-  border:1px solid var(--line);
-  border-top:7px solid var(--meter-color);
-  border-radius:16px;
-  display:flex;
-  flex-direction:column;
-  overflow:hidden;
-  box-shadow:0 1px 2px rgba(16,24,40,.04)
-}
+.meter{--meter-color:#2563eb;height:245px;background:var(--card);border:1px solid var(--line);border-top:7px solid var(--meter-color);border-radius:16px;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 1px 2px rgba(16,24,40,.04)}
 .head{padding:8px 12px 2px;display:flex;align-items:center;justify-content:space-between;gap:8px}
 .name{font-size:1.12rem;font-weight:800}
 .status{font-size:.8rem;color:var(--muted);white-space:nowrap}
-.status.ok{color:#15803d}
-.status.err{color:#b42318}
+.status.ok{color:#15803d}.status.err{color:#b42318}.status.warn{color:#b45309}
 .reading{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;gap:.16em;padding:2px 10px 7px;white-space:nowrap}
 .value{font-size:clamp(3.6rem,5.2vw,5.8rem);line-height:.86;font-weight:780;letter-spacing:-.055em;font-variant-numeric:tabular-nums lining-nums}
 .unit{font-size:clamp(1.5rem,2vw,2.4rem);font-weight:750;color:#475467;margin-left:.08em}
 .controls{border-top:1px solid var(--line);padding:6px 8px;display:flex;gap:7px;align-items:center}
 .controls button{flex:1;padding:7px 10px}
 .device{display:none}
-
 .add-wrap{display:flex;justify-content:center;padding:14px 0 0}
 .add-meter{min-width:220px;border-style:dashed;font-size:1rem;padding:10px 18px}
 .add-meter .plus{font-size:1.35rem;line-height:0;vertical-align:-1px;margin-right:5px}
-
-
-@media(max-width:1050px) and (min-width:761px){
-  .meters{grid-template-columns:repeat(2,minmax(0,1fr))}
-  .meter{height:225px}
-}
-
+@media(max-width:1050px) and (min-width:761px){.meters{grid-template-columns:repeat(2,minmax(0,1fr))}.meter{height:225px}}
 @media(max-width:760px){
   .app{width:calc(100% - 12px);padding:7px 0 16px}
   header{grid-template-columns:1fr auto;gap:7px;margin-bottom:7px}
@@ -82,17 +56,11 @@ button:disabled{opacity:.42;cursor:not-allowed}
   .global button{padding:5px 7px;font-size:.72rem}
   .meters{grid-template-columns:1fr;gap:6px}
   .meter{height:180px;border-radius:12px;border-top-width:5px}
-  .head{padding:5px 8px 1px}
-  .name{font-size:.9rem}
-  .status{font-size:.67rem}
-  .value{font-size:clamp(3rem,14vw,5rem)}
-  .unit{font-size:clamp(1.3rem,6vw,2rem)}
-  .controls{padding:4px 5px;gap:4px}
-  .controls button{padding:5px 4px;font-size:.75rem}
-  .add-wrap{padding-top:8px}
-  .add-meter{min-width:180px;padding:8px 12px;font-size:.85rem}
+  .head{padding:5px 8px 1px}.name{font-size:.9rem}.status{font-size:.67rem}
+  .value{font-size:clamp(3rem,14vw,5rem)}.unit{font-size:clamp(1.3rem,6vw,2rem)}
+  .controls{padding:4px 5px;gap:4px}.controls button{padding:5px 4px;font-size:.75rem}
+  .add-wrap{padding-top:8px}.add-meter{min-width:180px;padding:8px 12px;font-size:.85rem}
 }
-
 :fullscreen body{background:#fff}
 :fullscreen .app{width:min(1280px,calc(100% - 24px));padding:10px 0 18px}
 :fullscreen .meter{box-shadow:none}
@@ -100,43 +68,32 @@ button:disabled{opacity:.42;cursor:not-allowed}
 </head>
 <body>
 <div class="app">
-  <header>
-    <h1>Siloměry</h1>
-
-    <div class="connection" id="connection_type">
-      <span>Připojení:</span>
-      <div class="transport-switch" role="radiogroup" aria-label="Typ připojení">
-        <label id="ble_label" class="transport-option" for="ble">
-          <input type="radio" id="ble" name="type" value="1" checked>
-          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <path d="M12 3v18l6-5-6-4 6-4-6-5Z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="m6 7 12 9M6 17 18 8" stroke-width="2" stroke-linecap="round"/>
-          </svg>
-          <span>Bluetooth</span>
-        </label>
-        <label id="usb_label" class="transport-option" for="usb">
-          <input type="radio" id="usb" name="type" value="0">
-          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <path d="M12 3v12M12 3 9.5 5.5M12 3l2.5 2.5M12 10h5v-2.5M17 7.5h2v2h-2v-2ZM12 13H7v-2.5M7 10.5 4.5 13 7 15.5M12 15v2.5a3.5 3.5 0 0 1-3.5 3.5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <circle cx="8.5" cy="21" r="1.5" stroke-width="2"/>
-          </svg>
-          <span>USB</span>
-        </label>
-      </div>
-      <span id="support"></span>
+<header>
+  <h1>Siloměry</h1>
+  <div class="connection">
+    <span>Připojení:</span>
+    <div class="transport-switch" role="radiogroup" aria-label="Typ připojení">
+      <label id="ble_label" class="transport-option" for="ble">
+        <input type="radio" id="ble" name="type" value="1" checked>
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3v18l6-5-6-4 6-4-6-5Z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="m6 7 12 9M6 17 18 8" stroke-width="2" stroke-linecap="round"/></svg>
+        <span>Bluetooth</span>
+      </label>
+      <label id="usb_label" class="transport-option" for="usb">
+        <input type="radio" id="usb" name="type" value="0">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3v12M12 3 9.5 5.5M12 3l2.5 2.5M12 10h5v-2.5M17 7.5h2v2h-2v-2ZM12 13H7v-2.5M7 10.5 4.5 13 7 15.5M12 15v2.5a3.5 3.5 0 0 1-3.5 3.5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="8.5" cy="21" r="1.5" stroke-width="2"/></svg>
+        <span>USB</span>
+      </label>
     </div>
-
-    <div class="global">
-      <button id="zeroAll">Vynulovat všechny</button>
-      <button id="fullscreen" class="primary">Celá obrazovka</button>
-    </div>
-  </header>
-
-  <main id="meters" class="meters"></main>
-
-  <div class="add-wrap">
-    <button id="addMeter" class="add-meter"><span class="plus">+</span> Přidat siloměr</button>
+    <span id="support"></span>
   </div>
+  <div class="global">
+    <button id="zeroAll">Vynulovat všechny</button>
+    <button id="fullscreen" class="primary">Celá obrazovka</button>
+  </div>
+</header>
+
+<main id="meters" class="meters"></main>
+<div class="add-wrap"><button id="addMeter" class="add-meter"><span class="plus">+</span> Přidat siloměr</button></div>
 </div>
 
 <script>
@@ -147,132 +104,110 @@ const colors=['#2563eb','#dc2626','#16a34a','#ea580c','#7c3aed','#0891b2','#ca8a
 const metersEl=document.querySelector('#meters');
 const slots=[];
 
-const fmt=n=>Number.isFinite(n)
-  ? n.toLocaleString('cs-CZ',{minimumFractionDigits:2,maximumFractionDigits:2})
-  : '—';
-
+const fmt=n=>Number.isFinite(n)?n.toLocaleString('cs-CZ',{minimumFractionDigits:2,maximumFractionDigits:2}):'—';
 const measured=s=>s.raw-s.offset;
 
 function setStatus(s,text,type=''){
   s.statusEl.textContent=text;
   s.statusEl.className='status'+(type?' '+type:'');
 }
-
-function update(s){
-  s.valueEl.textContent=s.hasValue?fmt(measured(s)):'—';
-}
+function update(s){s.valueEl.textContent=s.hasValue?fmt(measured(s)):'—';}
 
 function findForceSensor(device){
   const sensors=device?.sensors||[];
   return sensors.find(s=>/force/i.test(String(s.name||''))&&String(s.unit||'').trim()==='N')
     || sensors.find(s=>String(s.unit||'').trim()==='N')
     || sensors.find(s=>/force/i.test(String(s.name||'')))
-    || sensors[0]
-    || null;
+    || sensors[0] || null;
 }
 
 function makeMeter(){
   const number=slots.length+1;
   const card=document.createElement('section');
   card.className='meter';
-  card.dataset.slot=String(number-1);
   card.style.setProperty('--meter-color',colors[(number-1)%colors.length]);
   card.innerHTML=`
-    <div class="head">
-      <div class="name">Siloměr ${number}</div>
-      <div class="status">nepřipojen</div>
-    </div>
-    <div class="reading">
-      <span class="value">—</span><span class="unit">N</span>
-    </div>
+    <div class="head"><div class="name">Siloměr ${number}</div><div class="status">nepřipojen</div></div>
+    <div class="reading"><span class="value">—</span><span class="unit">N</span></div>
     <div class="controls">
       <button class="connect primary">Připojit</button>
       <button class="zero" disabled>Nulovat</button>
       <button class="disconnect" disabled>Odpojit</button>
     </div>
-    <div class="device"></div>
-  `;
-
+    <div class="device"></div>`;
   metersEl.appendChild(card);
 
   const slot={
-    i:number-1,
-    card,
-    device:null,
-    sensor:null,
-    raw:0,
-    offset:0,
-    hasValue:false,
-    valueEl:card.querySelector('.value'),
-    statusEl:card.querySelector('.status'),
-    deviceEl:card.querySelector('.device'),
-    connectBtn:card.querySelector('.connect'),
-    zeroBtn:card.querySelector('.zero'),
-    disconnectBtn:card.querySelector('.disconnect')
+    i:number-1,card,device:null,nativeDevice:null,sensor:null,raw:0,offset:0,hasValue:false,
+    valueEl:card.querySelector('.value'),statusEl:card.querySelector('.status'),
+    deviceEl:card.querySelector('.device'),connectBtn:card.querySelector('.connect'),
+    zeroBtn:card.querySelector('.zero'),disconnectBtn:card.querySelector('.disconnect')
   };
-
   slots.push(slot);
 
   slot.connectBtn.addEventListener('click',()=>connect(slot));
-  slot.zeroBtn.addEventListener('click',()=>{
-    if(!slot.hasValue)return;
-    slot.offset=slot.raw;
-    update(slot);
-  });
+  slot.zeroBtn.addEventListener('click',()=>{if(slot.hasValue){slot.offset=slot.raw;update(slot);}});
   slot.disconnectBtn.addEventListener('click',()=>disconnect(slot));
-
   return slot;
+}
+
+async function selectNativeDevice(bluetooth){
+  if(bluetooth){
+    if(!navigator.bluetooth)throw new Error('Web Bluetooth není v tomto prohlížeči dostupný. Použij Chrome nebo Edge.');
+    return navigator.bluetooth.requestDevice({
+      filters:[{namePrefix:'GDX'}],
+      optionalServices:['d91714ef-28b9-4f91-ba16-f0d9a604f112']
+    });
+  }
+
+  if(!navigator.hid)throw new Error('USB přes WebHID není v tomto prohlížeči dostupné. Použij Chrome nebo Edge.');
+  const devices=await navigator.hid.requestDevice({
+    filters:[{vendorId:0x08f7,productId:0x0010}]
+  });
+  return devices[0]||null;
 }
 
 async function connect(slot){
   if(slot.device)return;
-
   slot.connectBtn.disabled=true;
   setStatus(slot,'připojuji…');
 
   try{
-    if(!window.godirect){
-      throw new Error('Nepodařilo se načíst knihovnu Vernier Go Direct.');
-    }
+    if(!window.godirect)throw new Error('Nepodařilo se načíst knihovnu Vernier Go Direct.');
 
     const bluetooth=document.querySelector('input[name="type"]:checked').value==="1";
+    const nativeDevice=await selectNativeDevice(bluetooth);
+    if(!nativeDevice)throw new DOMException('Nebylo vybráno žádné zařízení.','NotFoundError');
 
-    if(bluetooth && !navigator.bluetooth){
-      throw new Error('Web Bluetooth není v tomto prohlížeči dostupný. Použij Chrome nebo Edge.');
+    if(slots.some(s=>s!==slot && s.nativeDevice===nativeDevice && s.device)){
+      throw new Error('Tento siloměr už je v aplikaci připojený.');
     }
-    if(!bluetooth && !navigator.hid){
-      throw new Error('USB přes WebHID není v tomto prohlížeči dostupné. Použij Chrome nebo Edge.');
-    }
 
-    const device=await godirect.selectDevice(bluetooth);
-    if(!device)throw new DOMException('Nebylo vybráno žádné zařízení.');
-
+    const device=await godirect.createDevice(nativeDevice,{open:false,startMeasurements:false});
     slot.device=device;
+    slot.nativeDevice=nativeDevice;
 
     device.on('device-closed',()=>{
       if(slot.device===device)reset(slot,'odpojen');
     });
 
-    if(typeof device.enableDefaultSensors==='function'){
-      device.enableDefaultSensors();
-    }
+    await device.open(false);
 
-    const force=
-      (device.sensors||[]).find(s=>s.enabled && /force/i.test(String(s.name||'')))
-      || (device.sensors||[]).find(s=>s.enabled && String(s.unit||'').trim()==='N')
-      || findForceSensor(device);
+    if(typeof device.enableDefaultSensors==='function')device.enableDefaultSensors();
 
+    const force=findForceSensor(device);
     if(!force)throw new Error('Nebyl nalezen kanál síly.');
 
-    if(!force.enabled){
-      try{force.enabled=true}catch(_){}
+    for(const sensor of (device.sensors||[])){
+      try{sensor.enabled=(sensor===force);}catch(_){}
     }
+    if(!force.enabled){try{force.enabled=true}catch(_){}}
 
     slot.sensor=force;
     slot.raw=0;
     slot.offset=0;
     slot.hasValue=false;
-    slot.deviceEl.textContent=`${device.name||'Go Direct'} · ${force.name||'Force'}`;
+    slot.deviceEl.textContent=`${device.name||nativeDevice.productName||'Go Direct'} · ${force.name||'Force'}`;
 
     force.on('value-changed',sensor=>{
       const n=Number(sensor.value);
@@ -282,32 +217,32 @@ async function connect(slot){
       update(slot);
     });
 
-    setStatus(slot,'připojen','ok');
+    if(typeof device.start==='function')await device.start();
+
+    setStatus(slot,bluetooth?'připojen · BT':'připojen · USB','ok');
     slot.connectBtn.textContent='Připojeno';
     slot.zeroBtn.disabled=false;
     slot.disconnectBtn.disabled=false;
-
   }catch(err){
     console.error(err);
-
-    try{
-      if(slot.device)await slot.device.close();
-    }catch(_){}
+    try{if(slot.device)await slot.device.close();}catch(_){}
 
     slot.device=null;
+    slot.nativeDevice=null;
     slot.sensor=null;
     slot.hasValue=false;
     slot.deviceEl.textContent='';
     slot.valueEl.textContent='—';
 
-    const cancelled=
-      err?.name==='NotFoundError'
-      || /cancel|cancelled|canceled|No device selected/i.test(String(err));
-
+    const cancelled=err?.name==='NotFoundError'||/cancel|cancelled|canceled|No device selected/i.test(String(err));
     setStatus(slot,cancelled?'výběr zrušen':'chyba',cancelled?'':'err');
 
     if(!cancelled){
-      alert(err?.message||String(err));
+      const text=String(err?.message||err);
+      const usbHint=document.querySelector('#usb').checked
+        ? '\n\nUSB: zkontroluj datový USB kabel, Chrome/Edge a že senzor nepoužívá současně Graphical Analysis.'
+        : '';
+      alert(text+usbHint);
     }
   }finally{
     slot.connectBtn.disabled=!!slot.device;
@@ -316,33 +251,19 @@ async function connect(slot){
 }
 
 function reset(slot,status='nepřipojen'){
-  slot.device=null;
-  slot.sensor=null;
-  slot.raw=0;
-  slot.offset=0;
-  slot.hasValue=false;
-
-  slot.valueEl.textContent='—';
-  slot.deviceEl.textContent='';
-  slot.connectBtn.disabled=false;
-  slot.connectBtn.textContent='Připojit';
-  slot.zeroBtn.disabled=true;
-  slot.disconnectBtn.disabled=true;
+  slot.device=null;slot.nativeDevice=null;slot.sensor=null;slot.raw=0;slot.offset=0;slot.hasValue=false;
+  slot.valueEl.textContent='—';slot.deviceEl.textContent='';
+  slot.connectBtn.disabled=false;slot.connectBtn.textContent='Připojit';
+  slot.zeroBtn.disabled=true;slot.disconnectBtn.disabled=true;
   setStatus(slot,status);
 }
 
 async function disconnect(slot){
   const d=slot.device;
-  if(!d){
-    reset(slot);
-    return;
-  }
-
+  if(!d){reset(slot);return;}
   setStatus(slot,'odpojuji…');
-
-  try{d.stop?.()}catch(_){}
-  try{await d.close()}catch(_){}
-
+  try{if(typeof d.stop==='function')await d.stop();}catch(_){}
+  try{await d.close();}catch(_){}
   if(slot.device===d)reset(slot);
 }
 
@@ -350,52 +271,25 @@ document.querySelector('#addMeter').addEventListener('click',()=>{
   const slot=makeMeter();
   slot.card.scrollIntoView({behavior:'smooth',block:'center'});
 });
-
 document.querySelector('#zeroAll').addEventListener('click',()=>{
-  slots.forEach(slot=>{
-    if(slot.hasValue){
-      slot.offset=slot.raw;
-      update(slot);
-    }
-  });
+  slots.forEach(slot=>{if(slot.hasValue){slot.offset=slot.raw;update(slot);}});
 });
-
 document.querySelector('#fullscreen').addEventListener('click',async()=>{
-  try{
-    if(!document.fullscreenElement){
-      await document.documentElement.requestFullscreen();
-    }else{
-      await document.exitFullscreen();
-    }
-  }catch(_){}
+  try{if(!document.fullscreenElement)await document.documentElement.requestFullscreen();else await document.exitFullscreen();}catch(_){}
 });
 
-const ble=document.querySelector('#ble');
-const usb=document.querySelector('#usb');
-const bleLabel=document.querySelector('#ble_label');
-const usbLabel=document.querySelector('#usb_label');
+const ble=document.querySelector('#ble'),usb=document.querySelector('#usb');
+const bleLabel=document.querySelector('#ble_label'),usbLabel=document.querySelector('#usb_label');
 
-if(!navigator.bluetooth){
-  ble.disabled=true;
-  bleLabel.classList.add('unsupported');
-  if(navigator.hid)usb.checked=true;
-}
-if(!navigator.hid){
-  usb.disabled=true;
-  usbLabel.classList.add('unsupported');
-  if(navigator.bluetooth)ble.checked=true;
-}
+if(!navigator.bluetooth){ble.disabled=true;bleLabel.classList.add('unsupported');if(navigator.hid)usb.checked=true;}
+if(!navigator.hid){usb.disabled=true;usbLabel.classList.add('unsupported');if(navigator.bluetooth)ble.checked=true;}
 
 document.querySelector('#support').textContent=
-  (!navigator.bluetooth || !navigator.hid)
-    ? `${navigator.bluetooth?'':'Bluetooth není podporováno'}${(!navigator.bluetooth&&!navigator.hid)?' · ':''}${navigator.hid?'':'USB není podporováno'}`
-    : '';
+  navigator.hid
+    ? 'USB: Chrome/Edge · připojuj každý siloměr zvlášť'
+    : 'USB není v tomto prohlížeči podporováno';
 
-// Výchozí tři siloměry.
-makeMeter();
-makeMeter();
-makeMeter();
-
+makeMeter();makeMeter();makeMeter();
 })();
 </script>
 </body>
