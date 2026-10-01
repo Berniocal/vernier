@@ -27,6 +27,10 @@ button:hover{background:#f8fafc}
 button:disabled{opacity:.42;cursor:not-allowed}
 .primary{background:#111827;color:#fff;border-color:#111827}
 .primary:hover{background:#1f2937}
+.measurement{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:12px 0}
+.measurement-status{color:var(--muted);font-size:.9rem}
+.average{text-align:center;padding:0 8px 10px;color:#475467;font-size:.88rem}
+.average strong{color:var(--text);font-variant-numeric:tabular-nums}
 .meters{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
 .meter{--meter-color:#2563eb;height:245px;background:var(--card);border:1px solid var(--line);border-top:7px solid var(--meter-color);border-radius:16px;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 1px 2px rgba(16,24,40,.04)}
 .head{padding:8px 12px 2px;display:flex;align-items:center;justify-content:space-between;gap:8px}
@@ -92,6 +96,7 @@ button:disabled{opacity:.42;cursor:not-allowed}
   </div>
 </header>
 
+<div class="measurement"><button id="measure" class="primary" disabled>Spustit měření</button><span id="measurementStatus" class="measurement-status" role="status">Připoj siloměr pro spuštění měření.</span></div>
 <main id="meters" class="meters"></main>
 <div class="add-wrap"><button id="addMeter" class="add-meter"><span class="plus">+</span> Přidat siloměr</button></div>
 </div>
@@ -103,6 +108,40 @@ button:disabled{opacity:.42;cursor:not-allowed}
 const colors=['#2563eb','#dc2626','#16a34a','#ea580c','#7c3aed','#0891b2','#ca8a04','#db2777'];
 const metersEl=document.querySelector('#meters');
 const slots=[];
+const measureBtn=document.querySelector('#measure');
+const measurementStatus=document.querySelector('#measurementStatus');
+let recording=false;
+let participants=[];
+function refreshMeasurementControls(){
+  measureBtn.disabled=!recording&&!slots.some(s=>s.device&&s.hasValue);
+  slots.forEach(s=>{s.zeroBtn.disabled=recording||!s.device||!s.hasValue;});
+  document.querySelector('#zeroAll').disabled=recording;
+}
+function recordSample(s,n){
+  if(!recording||!participants.includes(s)||!Number.isFinite(n))return;
+  s.sampleCount++;
+  s.sampleMean+=(n-s.sampleMean)/s.sampleCount;
+}
+function toggleMeasurement(){
+  if(!recording){
+    participants=slots.filter(s=>s.device&&s.hasValue);
+    if(!participants.length)return;
+    participants.forEach(s=>{s.sampleCount=0;s.sampleMean=0;});
+    recording=true;
+    measureBtn.textContent='Ukončit měření';
+    measurementStatus.textContent='Probíhá měření…';
+  }else{
+    recording=false;
+    participants.forEach(s=>{
+      s.averageEl.textContent=s.sampleCount?fmt(s.sampleMean)+' N':'—';
+    });
+    measureBtn.textContent='Spustit měření';
+    measurementStatus.textContent='Měření ukončeno. Průměry jsou uvedeny u siloměrů.';
+    participants=[];
+  }
+  refreshMeasurementControls();
+}
+measureBtn.addEventListener('click',toggleMeasurement);
 
 const fmt=n=>Number.isFinite(n)?n.toLocaleString('cs-CZ',{minimumFractionDigits:2,maximumFractionDigits:2}):'—';
 const measured=s=>s.raw-s.offset;
@@ -129,6 +168,7 @@ function makeMeter(){
   card.innerHTML=`
     <div class="head"><div class="name">Siloměr ${number}</div><div class="status">nepřipojen</div></div>
     <div class="reading"><span class="value">—</span><span class="unit">N</span></div>
+    <div class="average">Průměrná síla · poslední měření: <strong class="average-value">—</strong></div>
     <div class="controls">
       <button class="connect primary">Připojit</button>
       <button class="zero" disabled>Nulovat</button>
@@ -138,6 +178,7 @@ function makeMeter(){
   metersEl.appendChild(card);
 
   const slot={
+    sampleCount:0,sampleMean:0,averageEl:card.querySelector('.average-value'),
     i:number-1,card,device:null,sensor:null,raw:0,offset:0,hasValue:false,
     valueEl:card.querySelector('.value'),statusEl:card.querySelector('.status'),
     deviceEl:card.querySelector('.device'),connectBtn:card.querySelector('.connect'),
@@ -146,7 +187,7 @@ function makeMeter(){
   slots.push(slot);
 
   slot.connectBtn.addEventListener('click',()=>connect(slot));
-  slot.zeroBtn.addEventListener('click',()=>{if(slot.hasValue){slot.offset=slot.raw;update(slot);}});
+  slot.zeroBtn.addEventListener('click',()=>{if(!recording&&slot.hasValue){slot.offset=slot.raw;update(slot);}});
   slot.disconnectBtn.addEventListener('click',()=>disconnect(slot));
   return slot;
 }
@@ -190,18 +231,21 @@ async function connect(slot){
     slot.deviceEl.textContent=`${device.name||'Go Direct'} · ${force.name||'Force'}`;
 
     force.on('value-changed',sensor=>{
+      if(slot.device!==device||slot.sensor!==force)return;
       const n=Number(sensor.value);
       if(!Number.isFinite(n))return;
       slot.raw=n;
       slot.hasValue=true;
       update(slot);
+      recordSample(slot,measured(slot));
+      refreshMeasurementControls();
     });
 
     if(typeof device.start==='function')await device.start();
 
     setStatus(slot,bluetooth?'připojen · BT':'připojen · USB','ok');
     slot.connectBtn.textContent='Připojeno';
-    slot.zeroBtn.disabled=false;
+    slot.zeroBtn.disabled=recording||!slot.hasValue;
     slot.disconnectBtn.disabled=false;
   }catch(err){
     console.error(err);
@@ -226,6 +270,7 @@ async function connect(slot){
   }finally{
     slot.connectBtn.disabled=!!slot.device;
     if(!slot.device)slot.connectBtn.textContent='Připojit';
+    refreshMeasurementControls();
   }
 }
 
@@ -235,6 +280,7 @@ function reset(slot,status='nepřipojen'){
   slot.connectBtn.disabled=false;slot.connectBtn.textContent='Připojit';
   slot.zeroBtn.disabled=true;slot.disconnectBtn.disabled=true;
   setStatus(slot,status);
+  refreshMeasurementControls();
 }
 
 async function disconnect(slot){
@@ -251,7 +297,7 @@ document.querySelector('#addMeter').addEventListener('click',()=>{
   slot.card.scrollIntoView({behavior:'smooth',block:'center'});
 });
 document.querySelector('#zeroAll').addEventListener('click',()=>{
-  slots.forEach(slot=>{if(slot.hasValue){slot.offset=slot.raw;update(slot);}});
+  slots.forEach(slot=>{if(!recording&&slot.hasValue){slot.offset=slot.raw;update(slot);}});
 });
 document.querySelector('#fullscreen').addEventListener('click',async()=>{
   try{if(!document.fullscreenElement)await document.documentElement.requestFullscreen();else await document.exitFullscreen();}catch(_){}
