@@ -192,6 +192,51 @@ function makeMeter(){
   return slot;
 }
 
+
+const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+async function selectBluetoothForce(slot){
+  const native=await navigator.bluetooth.requestDevice({
+    filters:[{namePrefix:'GDX'}],
+    optionalServices:['d91714ef-28b9-4f91-ba16-f0d9a604f112']
+  });
+  // Wait for notifications before Go Direct sends initialization commands.
+  for(let attempt=0;attempt<2;attempt++){
+    let response=null,listener=null,closed=null;
+    const cleanup=()=>{
+      if(response&&listener)response.removeEventListener('characteristicvaluechanged',listener);
+      if(closed)native.removeEventListener('gattserverdisconnected',closed);
+    };
+    const adapter={
+      godirectAdapter:true,maxPacketLength:20,
+      async setup({onClosed,onResponse}){
+        closed=()=>{cleanup();onClosed();};
+        native.addEventListener('gattserverdisconnected',closed);
+        const server=await native.gatt.connect();
+        const service=await server.getPrimaryService('d91714ef-28b9-4f91-ba16-f0d9a604f112');
+        this.command=await service.getCharacteristic('f4bf14a6-c7d5-4b6d-8aa8-df1a7c83adcb');
+        response=await service.getCharacteristic('b41e6675-a329-40e0-aa01-44d2f444babe');
+        listener=event=>onResponse(event.target.value);
+        response.addEventListener('characteristicvaluechanged',listener);
+        await response.startNotifications();
+      },
+      async writeCommand(data){await this.command.writeValue(data);},
+      async close(){native.gatt.disconnect();cleanup();}
+    };
+    let device=null;
+    try{
+      device=await godirect.createDevice(adapter,{open:false,startMeasurements:false});
+      await device.open(false);
+      return device;
+    }catch(error){
+      cleanup();
+      native.gatt.disconnect();
+      if(attempt===1)throw error;
+      setStatus(slot,'opakuji připojení…');
+      await pause(1000);
+    }
+  }
+}
+
 async function connect(slot){
   if(slot.device)return;
   slot.connectBtn.disabled=true;
@@ -203,7 +248,7 @@ async function connect(slot){
     const bluetooth=document.querySelector('input[name="type"]:checked').value==="1";
 
     // Stejná cesta připojení jako u fungujícího Go Direct voltmetru.
-    const device=await godirect.selectDevice(bluetooth);
+    const device=bluetooth?await selectBluetoothForce(slot):await godirect.selectDevice(false);
     if(!device)throw new DOMException('Nebylo vybráno žádné zařízení.','NotFoundError');
 
     slot.device=device;
