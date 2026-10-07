@@ -1,0 +1,438 @@
+<!doctype html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Siloměry X, Y, V – úhel V vůči X</title>
+<style>
+  :root{
+    --bg:#f4f6f8;
+    --paper:#fff;
+    --ink:#111827;
+    --muted:#667085;
+    --border:#d0d5dd;
+    --accent:#2563eb;
+    --angle:#7c3aed;
+    --guide:#94a3b8;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+    color:var(--ink);
+    background:var(--bg);
+  }
+  .app{max-width:1000px;margin:0 auto;padding:18px}
+  .toolbar{
+    display:grid;
+    grid-template-columns:1fr auto;
+    gap:14px;
+    align-items:end;
+    margin-bottom:14px;
+    padding:14px;
+    background:#fff;
+    border:1px solid #e5e7eb;
+    border-radius:16px;
+  }
+  .controls{
+    display:grid;
+    grid-template-columns:minmax(250px,1fr) auto;
+    gap:12px 16px;
+    align-items:center;
+  }
+  .slider-label{
+    display:flex;
+    justify-content:space-between;
+    gap:12px;
+    margin-bottom:7px;
+    font-weight:800;
+  }
+  input[type=range]{width:100%;accent-color:var(--accent)}
+  .buttons{display:flex;flex-wrap:wrap;gap:8px}
+  button{
+    min-height:42px;
+    padding:9px 13px;
+    border:1px solid #cbd5e1;
+    border-radius:10px;
+    background:#fff;
+    color:var(--ink);
+    font:inherit;
+    font-weight:750;
+    cursor:pointer;
+  }
+  button:hover{background:#f8fafc}
+  button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+
+  .sheet{
+    background:var(--paper);
+    border:1px solid var(--border);
+    border-radius:16px;
+    overflow:hidden;
+  }
+  .head{text-align:center;padding:18px 20px 0}
+  .head h1{margin:0;font-size:clamp(22px,4vw,34px)}
+  .head p{margin:6px 0 0;color:var(--muted);font-size:14px}
+
+  svg{
+    display:block;
+    width:100%;
+    height:auto;
+    touch-action:none;
+    user-select:none;
+  }
+  .sensor-body,.sensor-neck{
+    fill:#fff;
+    stroke:#111827;
+    stroke-width:2.5;
+  }
+  .sensor-text{
+    fill:#111827;
+    font-size:29px;
+    font-weight:850;
+    text-anchor:middle;
+  }
+  .sensor-var{
+    fill:#111827;
+    font-size:29px;
+    font-weight:900;
+    text-anchor:middle;
+  }
+  .joint{
+    fill:#fff;
+    stroke:#111827;
+    stroke-width:2.8;
+  }
+  #sensorV{cursor:grab}
+  #sensorV.dragging{cursor:grabbing}
+
+  .guide{
+    stroke:var(--guide);
+    stroke-width:2.2;
+    stroke-dasharray:7 7;
+  }
+  .arc{
+    fill:none;
+    stroke:var(--angle);
+    stroke-width:5;
+    stroke-linecap:round;
+  }
+  .angle-badge{
+    fill:#fff;
+    stroke:var(--angle);
+    stroke-width:2;
+  }
+  .angle-text{
+    fill:#5b21b6;
+    font-size:27px;
+    font-weight:900;
+    text-anchor:middle;
+    dominant-baseline:middle;
+  }
+
+  .info{
+    margin:0 24px 24px;
+    padding:16px 18px;
+    border:1.5px solid #111827;
+    border-radius:10px;
+    display:grid;
+    grid-template-columns:1.2fr .8fr;
+    gap:18px;
+    align-items:center;
+  }
+  .info ul{margin:0;padding-left:22px;line-height:1.65}
+  .big{
+    border-left:1px solid #d1d5db;
+    text-align:center;
+    padding:8px 0;
+  }
+  .big strong{font-size:clamp(34px,7vw,56px)}
+  .rotation{display:block;margin-top:5px;color:var(--muted);font-size:14px}
+  .hint{margin:9px 2px 0;color:var(--muted);font-size:13px}
+  .print-note{display:none}
+
+  @media(max-width:700px){
+    .toolbar{grid-template-columns:1fr}
+    .controls{grid-template-columns:1fr}
+    .info{grid-template-columns:1fr;margin-inline:14px}
+    .big{border-left:0;border-top:1px solid #d1d5db}
+  }
+
+  @page{size:A4 portrait;margin:10mm}
+  @media print{
+    body{background:#fff}
+    .app{max-width:none;margin:0;padding:0}
+    .toolbar,.hint{display:none!important}
+    .sheet{
+      width:190mm;
+      min-height:277mm;
+      margin:0 auto;
+      border:0;
+      border-radius:0;
+      overflow:visible;
+    }
+    .head{padding-top:3mm}
+    .head h1{font-size:22pt}
+    .head p{font-size:9.5pt}
+    svg{width:170mm;margin:0 auto}
+    .info{
+      margin:1mm 8mm 0;
+      padding:4mm 5mm;
+      font-size:10pt;
+      break-inside:avoid;
+    }
+    .big strong{font-size:33pt}
+    .print-note{
+      display:block;
+      text-align:center;
+      margin-top:3mm;
+      color:#475467;
+      font-size:9pt;
+    }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <section class="toolbar" aria-label="Ovládání siloměru V">
+    <div class="controls">
+      <div>
+        <div class="slider-label">
+          <span>Natočení siloměru V</span>
+          <span><span id="rotationTop">180</span>°</span>
+        </div>
+        <input id="slider" type="range" min="0" max="359" step="1" value="180">
+      </div>
+      <div class="buttons">
+        <button type="button" data-d="-5">−5°</button>
+        <button type="button" data-d="-1">−1°</button>
+        <button type="button" data-d="1">+1°</button>
+        <button type="button" data-d="5">+5°</button>
+        <button type="button" id="reset">Výchozí</button>
+      </div>
+    </div>
+    <button type="button" class="primary" id="print">Export / tisk A4</button>
+  </section>
+
+  <main class="sheet">
+    <header class="head">
+      <h1>Siloměry X, Y a V</h1>
+      <p>Siloměry X a Y jsou pevné a svírají 90°. Siloměr V lze otáčet úplně dokola.</p>
+    </header>
+
+    <svg id="svg" viewBox="0 0 900 900" role="img" aria-label="Siloměry X a Y jsou pevné, siloměr V je otočný o 360 stupňů">
+      <g transform="translate(450 410) rotate(-45)">
+        <rect class="sensor-neck" x="-17" y="-120" width="34" height="82"/>
+        <rect class="sensor-body" x="-78" y="-310" width="156" height="190"/>
+        <text class="sensor-text" x="0" y="-220">Siloměr</text>
+        <text class="sensor-var" x="0" y="-180">Y</text>
+      </g>
+
+      <g transform="translate(450 410) rotate(45)">
+        <rect class="sensor-neck" x="-17" y="-120" width="34" height="82"/>
+        <rect class="sensor-body" x="-78" y="-310" width="156" height="190"/>
+        <text class="sensor-text" x="0" y="-220">Siloměr</text>
+        <text class="sensor-var" x="0" y="-180">X</text>
+      </g>
+
+      <g id="sensorV" transform="translate(450 410) rotate(180)">
+        <rect class="sensor-neck" x="-17" y="-120" width="34" height="82"/>
+        <rect class="sensor-body" x="-88" y="-330" width="176" height="210"/>
+        <text class="sensor-text" x="0" y="-230">Siloměr</text>
+        <text class="sensor-var" x="0" y="-185">V</text>
+      </g>
+
+      <line id="guideX" class="guide" x1="0" y1="0" x2="0" y2="0"/>
+      <line id="guideV" class="guide" x1="0" y1="0" x2="0" y2="0"/>
+      <path id="arc" class="arc" d=""/>
+      <circle id="badge" class="angle-badge" cx="0" cy="0" r="29"/>
+      <text id="angleText" class="angle-text" x="0" y="0">45°</text>
+
+      <circle class="joint" cx="450" cy="410" r="38"/>
+    </svg>
+
+    <section class="info">
+      <ul>
+        <li><strong>X a Y:</strong> jejich vzájemný úhel je stále <strong>90°</strong>.</li>
+        <li><strong>V:</strong> lze otáčet libovolně v rozsahu <strong>0–359°</strong>.</li>
+        <li><strong>α</strong> je menší úhel mezi osou siloměru <strong>V</strong> a osou siloměru <strong>X</strong>.</li>
+        <li>Např. když je V rovnoběžný s Y, je vůči X správně <strong>90°</strong>, nikoli 0°.</li>
+      </ul>
+      <div class="big" aria-live="polite">
+        <strong>α = <span id="alphaBig">45</span>°</strong>
+        <span class="rotation">Natočení V: <span id="rotationBig">180</span>°</span>
+      </div>
+    </section>
+
+    <div class="print-note">Siloměry X, Y, V – úhel siloměru V vůči siloměru X</div>
+  </main>
+
+  <p class="hint">Chyť přímo siloměr V a táhni kolem středu. Úhel se vždy počítá vůči ose siloměru X.</p>
+</div>
+
+<script>
+(() => {
+  const svg = document.getElementById('svg');
+  const sensorV = document.getElementById('sensorV');
+  const slider = document.getElementById('slider');
+  const rotationTop = document.getElementById('rotationTop');
+  const rotationBig = document.getElementById('rotationBig');
+  const alphaBig = document.getElementById('alphaBig');
+  const guideX = document.getElementById('guideX');
+  const guideV = document.getElementById('guideV');
+  const arc = document.getElementById('arc');
+  const badge = document.getElementById('badge');
+  const angleText = document.getElementById('angleText');
+
+  const CX = 450;
+  const CY = 410;
+  const X_ROT = 45;
+  const JOINT_R = 38;
+  let rotationV = 180;
+  let dragging = false;
+
+  function norm360(v){
+    v %= 360;
+    if(v < 0) v += 360;
+    return v;
+  }
+
+  function axisAngleToX(vRot){
+    let d = Math.abs(norm360(vRot) - X_ROT);
+    d = Math.min(d, 360 - d);
+    return Math.min(d, 180 - d);
+  }
+
+  function polar(radius, deg){
+    const r = deg * Math.PI / 180;
+    return {
+      x: CX + radius * Math.sin(r),
+      y: CY - radius * Math.cos(r)
+    };
+  }
+
+  function closestVAxisRay(vRot){
+    const candidates = [norm360(vRot), norm360(vRot + 180)];
+    function circularDistance(a,b){
+      let d = Math.abs(a-b);
+      return Math.min(d,360-d);
+    }
+    return circularDistance(candidates[0], X_ROT) <= circularDistance(candidates[1], X_ROT)
+      ? candidates[0] : candidates[1];
+  }
+
+  function signedShortestDelta(fromDeg,toDeg){
+    let d = norm360(toDeg - fromDeg);
+    if(d > 180) d -= 360;
+    return d;
+  }
+
+  function setLine(line, deg, r1, r2){
+    const p1 = polar(r1, deg);
+    const p2 = polar(r2, deg);
+    line.setAttribute('x1', p1.x.toFixed(2));
+    line.setAttribute('y1', p1.y.toFixed(2));
+    line.setAttribute('x2', p2.x.toFixed(2));
+    line.setAttribute('y2', p2.y.toFixed(2));
+  }
+
+  function arcPath(radius, startDeg, deltaDeg){
+    const endDeg = startDeg + deltaDeg;
+    const s = polar(radius, startDeg);
+    const e = polar(radius, endDeg);
+    const sweep = deltaDeg >= 0 ? 1 : 0;
+    const large = Math.abs(deltaDeg) > 180 ? 1 : 0;
+    return `M ${s.x.toFixed(2)} ${s.y.toFixed(2)} A ${radius} ${radius} 0 ${large} ${sweep} ${e.x.toFixed(2)} ${e.y.toFixed(2)}`;
+  }
+
+  function update(){
+    rotationV = norm360(Math.round(rotationV));
+    const alpha = Math.round(axisAngleToX(rotationV));
+
+    slider.value = String(rotationV);
+    rotationTop.textContent = rotationV;
+    rotationBig.textContent = rotationV;
+    alphaBig.textContent = alpha;
+
+    sensorV.setAttribute('transform', `translate(${CX} ${CY}) rotate(${rotationV})`);
+
+    const vRay = closestVAxisRay(rotationV);
+    const delta = signedShortestDelta(X_ROT, vRay);
+
+    setLine(guideX, X_ROT, JOINT_R + 5, 135);
+    setLine(guideV, vRay, JOINT_R + 5, 135);
+
+    const arcR = 88;
+    arc.setAttribute('d', arcPath(arcR, X_ROT, delta));
+
+    const mid = X_ROT + delta/2;
+    const labelPos = polar(122, mid);
+    badge.setAttribute('cx', labelPos.x.toFixed(2));
+    badge.setAttribute('cy', labelPos.y.toFixed(2));
+    angleText.setAttribute('x', labelPos.x.toFixed(2));
+    angleText.setAttribute('y', labelPos.y.toFixed(2));
+    angleText.textContent = alpha + '°';
+  }
+
+  slider.addEventListener('input', () => {
+    rotationV = Number(slider.value);
+    update();
+  });
+
+  document.querySelectorAll('[data-d]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      rotationV = norm360(rotationV + Number(btn.dataset.d));
+      update();
+    });
+  });
+
+  document.getElementById('reset').addEventListener('click', () => {
+    rotationV = 180;
+    update();
+  });
+
+  document.getElementById('print').addEventListener('click', () => window.print());
+
+  function toSvg(clientX,clientY){
+    const p = svg.createSVGPoint();
+    p.x = clientX;
+    p.y = clientY;
+    const m = svg.getScreenCTM();
+    return m ? p.matrixTransform(m.inverse()) : null;
+  }
+
+  function pointerRotation(clientX,clientY){
+    const p = toSvg(clientX,clientY);
+    if(!p) return;
+    const dx = p.x - CX;
+    const dy = CY - p.y;
+    rotationV = norm360(Math.atan2(dx,dy) * 180 / Math.PI);
+    update();
+  }
+
+  sensorV.addEventListener('pointerdown', e => {
+    dragging = true;
+    sensorV.classList.add('dragging');
+    sensorV.setPointerCapture(e.pointerId);
+    pointerRotation(e.clientX,e.clientY);
+  });
+
+  sensorV.addEventListener('pointermove', e => {
+    if(dragging) pointerRotation(e.clientX,e.clientY);
+  });
+
+  function stop(e){
+    dragging = false;
+    sensorV.classList.remove('dragging');
+    if(e && sensorV.hasPointerCapture(e.pointerId)){
+      sensorV.releasePointerCapture(e.pointerId);
+    }
+  }
+
+  sensorV.addEventListener('pointerup', stop);
+  sensorV.addEventListener('pointercancel', stop);
+
+  update();
+})();
+</script>
+</body>
+</html>
