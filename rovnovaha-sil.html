@@ -34,7 +34,11 @@ button:disabled{opacity:.42;cursor:not-allowed}
 .meters{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
 .meter{--meter-color:#2563eb;height:245px;background:var(--card);border:1px solid var(--line);border-top:7px solid var(--meter-color);border-radius:16px;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 1px 2px rgba(16,24,40,.04)}
 .head{padding:8px 12px 2px;display:flex;align-items:center;justify-content:space-between;gap:8px}
-.name{font-size:1.12rem;font-weight:800}
+.name-wrap{display:flex;align-items:center;gap:5px;flex:1;min-width:0}
+.name{font-size:1.12rem;font-weight:800;min-width:0;width:100%;border:1px solid transparent;border-radius:5px;background:transparent;color:var(--text);padding:3px 4px;text-overflow:ellipsis}
+.name:hover{border-color:var(--line)}
+.name:focus{border-color:var(--meter-color);outline:2px solid var(--meter-color);text-overflow:clip;background:#fff}
+.name-pencil{color:var(--muted);font-size:.85rem;cursor:text}
 .status{font-size:.8rem;color:var(--muted);white-space:nowrap}
 .status.ok{color:#15803d}.status.err{color:#b42318}.status.warn{color:#b45309}
 .reading{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;gap:.16em;padding:2px 10px 7px;white-space:nowrap}
@@ -166,7 +170,7 @@ function makeMeter(){
   card.className='meter';
   card.style.setProperty('--meter-color',colors[(number-1)%colors.length]);
   card.innerHTML=`
-    <div class="head"><div class="name">Siloměr ${number}</div><div class="status">nepřipojen</div></div>
+    <div class="head"><label class="name-wrap"><input class="name" type="text" maxlength="40" aria-label="Název siloměru ${number}" title="Klikni pro přejmenování" autocomplete="off" spellcheck="false"><span class="name-pencil" aria-hidden="true">✎</span></label><div class="status">nepřipojen</div></div>
     <div class="reading"><span class="value">—</span><span class="unit">N</span></div>
     <div class="average">Průměrná síla · poslední měření: <strong class="average-value">—</strong></div>
     <div class="controls">
@@ -184,6 +188,22 @@ function makeMeter(){
     deviceEl:card.querySelector('.device'),connectBtn:card.querySelector('.connect'),
     zeroBtn:card.querySelector('.zero'),disconnectBtn:card.querySelector('.disconnect')
   };
+  const nameInput=card.querySelector('.name');
+  const defaultName='Siloměr '+number;
+  const nameKey='vernier-force-name-'+number;
+  let savedName=defaultName;
+  try{savedName=localStorage.getItem(nameKey)?.trim().slice(0,40)||defaultName;}catch(_){}
+  nameInput.value=savedName;
+  nameInput.addEventListener('focus',()=>nameInput.select());
+  nameInput.addEventListener('blur',()=>{
+    nameInput.value=nameInput.value.trim()||defaultName;
+    savedName=nameInput.value;
+    try{localStorage.setItem(nameKey,savedName);}catch(_){}
+  });
+  nameInput.addEventListener('keydown',event=>{
+    if(event.key==='Enter'){event.preventDefault();nameInput.blur();}
+    if(event.key==='Escape'){event.preventDefault();nameInput.value=savedName;nameInput.blur();}
+  });
   slots.push(slot);
 
   slot.connectBtn.addEventListener('click',()=>connect(slot));
