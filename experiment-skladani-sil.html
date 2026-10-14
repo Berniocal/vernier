@@ -62,6 +62,7 @@
   }
   button:hover{background:#f8fafc}
   button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  button.toggle-active{background:#111827;border-color:#111827;color:#fff}
 
   .sheet{
     background:var(--paper);
@@ -102,8 +103,27 @@
     stroke:#111827;
     stroke-width:2.8;
   }
-  #sensorV{cursor:grab}
-  #sensorV.dragging{cursor:grabbing}
+  #sensorV,#lineV{cursor:grab}
+  #sensorV.dragging,#lineV.dragging{cursor:grabbing}
+  .line-mode{display:none}
+  .force-line{
+    stroke:#111827;
+    stroke-width:5;
+    stroke-linecap:round;
+  }
+  .force-hit{
+    stroke:transparent;
+    stroke-width:34;
+    stroke-linecap:round;
+  }
+  .line-label{
+    fill:#111827;
+    font-size:30px;
+    font-weight:900;
+    text-anchor:middle;
+    dominant-baseline:middle;
+    pointer-events:none;
+  }
 
   .guide{
     stroke:var(--guide);
@@ -208,6 +228,7 @@
         <button type="button" data-d="1">+1°</button>
         <button type="button" data-d="5">+5°</button>
         <button type="button" id="reset">Výchozí</button>
+        <button type="button" id="viewToggle" aria-pressed="false">Zobrazit jen čáry</button>
       </div>
     </div>
     <button type="button" class="primary" id="print">Export / tisk A4</button>
@@ -220,25 +241,40 @@
     </header>
 
     <svg id="svg" viewBox="0 0 900 900" role="img" aria-label="Siloměry X a Y jsou pevné, siloměr V je otočný o 360 stupňů">
-      <g transform="translate(450 410) rotate(-45)">
+      <g id="sensorY" class="sensor-mode" transform="translate(450 410) rotate(-45)">
         <rect class="sensor-neck" x="-17" y="-120" width="34" height="82"/>
         <rect class="sensor-body" x="-78" y="-310" width="156" height="190"/>
         <text class="sensor-text" x="0" y="-220">Siloměr</text>
         <text class="sensor-var" x="0" y="-180">Y</text>
       </g>
 
-      <g transform="translate(450 410) rotate(45)">
+      <g id="sensorX" class="sensor-mode" transform="translate(450 410) rotate(45)">
         <rect class="sensor-neck" x="-17" y="-120" width="34" height="82"/>
         <rect class="sensor-body" x="-78" y="-310" width="156" height="190"/>
         <text class="sensor-text" x="0" y="-220">Siloměr</text>
         <text class="sensor-var" x="0" y="-180">X</text>
       </g>
 
-      <g id="sensorV" transform="translate(450 410) rotate(180)">
+      <g id="sensorV" class="sensor-mode" transform="translate(450 410) rotate(180)">
         <rect class="sensor-neck" x="-17" y="-120" width="34" height="82"/>
         <rect class="sensor-body" x="-88" y="-330" width="176" height="210"/>
         <text class="sensor-text" x="0" y="-230">Siloměr</text>
         <text class="sensor-var" x="0" y="-185">V</text>
+      </g>
+
+      <!-- Čárový režim: místo obrázků siloměrů pouze jejich osy -->
+      <g id="lineY" class="line-mode" transform="translate(450 410) rotate(-45)">
+        <line class="force-line" x1="0" y1="-38" x2="0" y2="-330"/>
+        <text class="line-label" x="0" y="-355">Y</text>
+      </g>
+      <g id="lineX" class="line-mode" transform="translate(450 410) rotate(45)">
+        <line class="force-line" x1="0" y1="-38" x2="0" y2="-330"/>
+        <text class="line-label" x="0" y="-355">X</text>
+      </g>
+      <g id="lineV" class="line-mode" transform="translate(450 410) rotate(180)">
+        <line class="force-line" x1="0" y1="-38" x2="0" y2="-350"/>
+        <line class="force-hit" x1="0" y1="-38" x2="0" y2="-370"/>
+        <text class="line-label" x="0" y="-375">V</text>
       </g>
 
       <line id="guideX" class="guide" x1="0" y1="0" x2="0" y2="0"/>
@@ -266,13 +302,19 @@
     <div class="print-note">Siloměry X, Y, V – úhel siloměru V vůči siloměru X</div>
   </main>
 
-  <p class="hint">Chyť přímo siloměr V a táhni kolem středu. Úhel se vždy počítá vůči ose siloměru X.</p>
+  <p class="hint">Chyť siloměr V nebo jeho čáru a táhni kolem středu. Přepínačem můžeš zobrazit celé siloměry, nebo jen jejich osy.</p>
 </div>
 
 <script>
 (() => {
   const svg = document.getElementById('svg');
   const sensorV = document.getElementById('sensorV');
+  const sensorX = document.getElementById('sensorX');
+  const sensorY = document.getElementById('sensorY');
+  const lineV = document.getElementById('lineV');
+  const lineX = document.getElementById('lineX');
+  const lineY = document.getElementById('lineY');
+  const viewToggle = document.getElementById('viewToggle');
   const slider = document.getElementById('slider');
   const rotationTop = document.getElementById('rotationTop');
   const rotationBig = document.getElementById('rotationBig');
@@ -289,6 +331,7 @@
   const JOINT_R = 38;
   let rotationV = 180;
   let dragging = false;
+  let linesOnly = false;
 
   function norm360(v){
     v %= 360;
@@ -354,6 +397,7 @@
     alphaBig.textContent = alpha;
 
     sensorV.setAttribute('transform', `translate(${CX} ${CY}) rotate(${rotationV})`);
+    lineV.setAttribute('transform', `translate(${CX} ${CY}) rotate(${rotationV})`);
 
     const vRay = closestVAxisRay(rotationV);
     const delta = signedShortestDelta(X_ROT, vRay);
@@ -372,6 +416,19 @@
     angleText.setAttribute('y', labelPos.y.toFixed(2));
     angleText.textContent = alpha + '°';
   }
+
+  function updateViewMode(){
+    [sensorX, sensorY, sensorV].forEach(el => el.style.display = linesOnly ? 'none' : '');
+    [lineX, lineY, lineV].forEach(el => el.style.display = linesOnly ? 'block' : 'none');
+    viewToggle.textContent = linesOnly ? 'Zobrazit siloměry' : 'Zobrazit jen čáry';
+    viewToggle.setAttribute('aria-pressed', String(linesOnly));
+    viewToggle.classList.toggle('toggle-active', linesOnly);
+  }
+
+  viewToggle.addEventListener('click', () => {
+    linesOnly = !linesOnly;
+    updateViewMode();
+  });
 
   slider.addEventListener('input', () => {
     rotationV = Number(slider.value);
@@ -409,29 +466,35 @@
     update();
   }
 
-  sensorV.addEventListener('pointerdown', e => {
-    dragging = true;
-    sensorV.classList.add('dragging');
-    sensorV.setPointerCapture(e.pointerId);
-    pointerRotation(e.clientX,e.clientY);
-  });
+  function bindDrag(el){
+    el.addEventListener('pointerdown', e => {
+      dragging = true;
+      el.classList.add('dragging');
+      el.setPointerCapture(e.pointerId);
+      pointerRotation(e.clientX,e.clientY);
+    });
 
-  sensorV.addEventListener('pointermove', e => {
-    if(dragging) pointerRotation(e.clientX,e.clientY);
-  });
+    el.addEventListener('pointermove', e => {
+      if(dragging) pointerRotation(e.clientX,e.clientY);
+    });
 
-  function stop(e){
-    dragging = false;
-    sensorV.classList.remove('dragging');
-    if(e && sensorV.hasPointerCapture(e.pointerId)){
-      sensorV.releasePointerCapture(e.pointerId);
+    function stop(e){
+      dragging = false;
+      el.classList.remove('dragging');
+      if(e && el.hasPointerCapture(e.pointerId)){
+        el.releasePointerCapture(e.pointerId);
+      }
     }
+
+    el.addEventListener('pointerup', stop);
+    el.addEventListener('pointercancel', stop);
   }
 
-  sensorV.addEventListener('pointerup', stop);
-  sensorV.addEventListener('pointercancel', stop);
+  bindDrag(sensorV);
+  bindDrag(lineV);
 
   update();
+  updateViewMode();
 })();
 </script>
 </body>
