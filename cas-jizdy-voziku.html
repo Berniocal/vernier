@@ -230,7 +230,18 @@ function findLastStationarySample(confirmThreshold){
  }
  if(movingIndex<0)movingIndex=after.findIndex(p=>sign()*(p.d-st.base)>=noiseFloor);
  if(movingIndex<0)return null;
- const moving=after[movingIndex];
+ // Jemný pohyb pod spouštěcím prahem lze rozpoznat zpětně, když
+ // navazuje na několik jednoznačně se vzdalujících/přibližujících bodů.
+ // Tím nevynecháme začátek rovnoměrně zrychleného pohybu z klidu.
+ const weakMotion=Math.max(0.001,Math.min(0.0025,1.5*(st.stationaryNoise||0)));
+ let firstMoving=movingIndex;
+ for(let j=movingIndex-1;j>=Math.max(0,movingIndex-5);j--){
+  const now=sign()*(after[j].d-st.base);
+  const next=sign()*(after[j+1].d-st.base);
+  if(now<weakMotion||now>next+weakMotion)break;
+  firstMoving=j;
+ }
+ const moving=after[firstMoving];
  const previous=clean.filter(p=>p.t<moving.t-1e-8 &&
    Math.abs(p.d-st.base)<=Math.max(0.008,2*noiseFloor));
  return previous.length?previous[previous.length-1]:null;
