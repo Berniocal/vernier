@@ -229,7 +229,7 @@ function onPoint(distance,fromDemo){
   const tolerance=Math.max(0.04,0.02+0.22*recentStep);
   if(Math.abs(distance-expected)>tolerance)outlier=true;
  }
- if(st.lastValid&&Math.abs(distance-st.lastValid.d)>Math.max(0.20,3.0*(t-st.lastValid.t)))outlier=true;
+ if((st.phase==="armed"||st.phase==="moving")&&st.lastValid&&Math.abs(distance-st.lastValid.d)>Math.max(0.20,3.0*(t-st.lastValid.t)))outlier=true;
  if(outlier){
   st.qualityRejected++;
   st.buffer.push({t,d:NaN,valid:false});if(st.buffer.length>80)st.buffer.shift();
@@ -301,7 +301,7 @@ function manualEnd(){
  if(st.phase==="moving"){finish(st.peak?st.peak.t:st.records[st.records.length-1].t,"Ukončeno ručně; použit poslední dosažený krajní bod.");return}
 }
 function resetDevice(message){
- st.device=null;st.sensor=null;st.source=null;st.lastValid=null;st.buffer=[];st.phase="idle";st.calibStart=st.calibEnd=NaN;
+ st.device=null;st.sensor=null;st.source=null;st.lastValid=null;st.buffer=[];st.phase="idle";st.calibStart=st.calibEnd=NaN;if(ui.endMode.value==="calibrated")ui.endMode.value="turn";renderOptions();
  ui.connect.disabled=false;ui.disconnect.disabled=true;ui.connection.textContent=message||"nepřipojeno";
  ui.arm.disabled=true;ui.abort.disabled=true;ui.demo.disabled=false;ui.connect.textContent="Připojit sonar";
  for(const id of settingIds)if(id!=="rowStep")ui[id].disabled=false;
