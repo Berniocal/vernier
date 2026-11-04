@@ -7,7 +7,7 @@
 <script src="https://unpkg.com/@vernier/godirect/dist/godirect.min.umd.js"></script>
 <style>
 :root{--bg:#f4f5f7;--card:#fff;--text:#111827;--muted:#667085;--border:#dbe1e8;--accent:#2563eb;--green:#15803d;--warn:#b45309;--red:#b42318}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:15px system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}button,input,select{font:inherit}button{cursor:pointer;border:1px solid var(--border);border-radius:10px;background:#fff;color:inherit;padding:10px 13px;font-weight:700}button:disabled{opacity:.42;cursor:not-allowed}button:not(:disabled):hover{filter:brightness(.96)}.primary{background:#111827;color:white;border-color:#111827}.blue{background:#2563eb;border-color:#2563eb;color:white}.danger{color:#b42318}.page{max-width:1150px;margin:auto;padding:14px 14px 35px}.top{display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:space-between;margin-bottom:13px}h1{font-size:clamp(1.3rem,3vw,1.9rem);letter-spacing:-.035em;margin:0}.topRight{display:flex;gap:7px;flex-wrap:wrap;align-items:center}.seg{display:flex;padding:3px;border-radius:12px;background:#e8edf3;border:1px solid #d6dde7;gap:2px}.seg label{position:relative;border-radius:9px;padding:7px 10px;font-size:.86rem;font-weight:750;cursor:pointer}.seg label:has(input:checked){background:white;box-shadow:0 1px 4px #0002}.seg input{position:absolute;opacity:0}.seg label:has(input:disabled){opacity:.38}.card{background:var(--card);border:1px solid var(--border);border-radius:17px;box-shadow:0 1px 3px #0f172a0a;padding:17px;margin:0 0 12px}.banner{font-weight:750;font-size:.92rem;margin-bottom:7px}.muted{color:var(--muted)}.small{font-size:.82rem;line-height:1.5}.good{color:var(--green)}.warn{color:var(--warn)}.error{color:var(--red)}.hero{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:14px;align-items:stretch}.timerPanel{display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;background:#f8fafc;border:1px solid #e5eaf0;border-radius:14px;padding:20px 10px}.state{font-weight:820;text-transform:uppercase;letter-spacing:.09em;font-size:.84rem;color:var(--muted)}.timer{font-weight:820;letter-spacing:-.065em;font-size:clamp(4rem,10vw,7.7rem);font-variant-numeric:tabular-nums;line-height:1.25}.timer small{font-size:.26em;letter-spacing:0;margin-left:5px;color:var(--muted)}.actionRow{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:10px}.actionRow button{min-width:125px}.metrics{display:grid;grid-template-columns:repeat(2,1fr);gap:9px}.metric{background:#f8fafc;border:1px solid #e5eaf0;border-radius:13px;padding:15px;min-height:112px;display:flex;justify-content:center;flex-direction:column}.metric .label{font-size:.82rem;color:var(--muted)}.metric strong{font-size:clamp(1.45rem,3vw,2.1rem);font-variant-numeric:tabular-nums;line-height:1.5}.sectionTitle{font-size:1.04rem;margin:0 0 11px;font-weight:800}.setup{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.field{display:flex;flex-direction:column;gap:5px;min-width:0}.field label,.field .legend{font-size:.83rem;color:#475467;font-weight:700}.field select,.field input{height:42px;border:1px solid #ccd4de;border-radius:9px;padding:8px 11px;max-width:100%;background:white;color:#111827;width:100%}.hint{font-size:.76rem;color:#667085;line-height:1.4}.calibBox{margin-top:14px;padding:13px;border:1px solid #cddcf1;background:#f6f9ff;border-radius:12px}.calibActions{display:flex;gap:7px;flex-wrap:wrap;margin:9px 0}.calibActions button{padding:9px 12px}.calibInfo{font-size:.85rem;color:#334155;line-height:1.65}.calibInfo b{font-variant-numeric:tabular-nums}.more{border-top:1px solid var(--border);margin-top:13px;padding-top:11px}.more summary{font-weight:750;cursor:pointer;color:#475467}.advanced{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:11px;margin-top:12px}.chartToolbar{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px}.graph{width:100%;height:275px;display:block}.chartbtns{display:flex;gap:6px;flex-wrap:wrap}.chartbtns button{padding:7px 11px}.chartbtns button.sel{background:#e8f0ff;border-color:#93b6fb;color:#1d4ed8}.tablebar{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px}.tablebar select{padding:6px;border:1px solid var(--border);border-radius:7px;background:white}.scrollTable{max-height:400px;overflow:auto;border:1px solid var(--border);border-radius:10px}table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}th,td{border-bottom:1px solid #e9edf2;padding:8px 12px;text-align:right;white-space:nowrap}th{position:sticky;top:0;background:#f1f5f9;font-size:.82rem;color:#475467}td{font-size:.88rem}tr:last-child td{border-bottom:0}.footerHint{font-size:.78rem;color:var(--muted);margin:8px 0 0;line-height:1.5}.connectState{font-weight:700;font-size:.8rem}.connectState:empty{display:none}.realtime{font-size:.82rem;color:#475467;text-align:center;margin-top:8px}.device{font-size:.77rem;color:var(--muted)}.hidden{display:none!important}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:15px system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}button,input,select{font:inherit}button{cursor:pointer;border:1px solid var(--border);border-radius:10px;background:#fff;color:inherit;padding:10px 13px;font-weight:700}button:disabled{opacity:.42;cursor:not-allowed}button:not(:disabled):hover{filter:brightness(.96)}.primary{background:#111827;color:white;border-color:#111827}.blue{background:#2563eb;border-color:#2563eb;color:white}.danger{color:#b42318}.page{max-width:1150px;margin:auto;padding:14px 14px 35px}.top{display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:space-between;margin-bottom:13px}h1{font-size:clamp(1.3rem,3vw,1.9rem);letter-spacing:-.035em;margin:0}.topRight{display:flex;gap:7px;flex-wrap:wrap;align-items:center}.seg{display:flex;padding:3px;border-radius:12px;background:#e8edf3;border:1px solid #d6dde7;gap:2px}.seg label{position:relative;border-radius:9px;padding:7px 10px;font-size:.86rem;font-weight:750;cursor:pointer}.seg label:has(input:checked){background:white;box-shadow:0 1px 4px #0002}.seg input{position:absolute;opacity:0}.seg label:has(input:disabled){opacity:.38}.card{background:var(--card);border:1px solid var(--border);border-radius:17px;box-shadow:0 1px 3px #0f172a0a;padding:17px;margin:0 0 12px}.banner{font-weight:750;font-size:.92rem;margin-bottom:7px}.muted{color:var(--muted)}.small{font-size:.82rem;line-height:1.5}.good{color:var(--green)}.warn{color:var(--warn)}.error{color:var(--red)}.hero{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:14px;align-items:stretch}.timerPanel{display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;background:#f8fafc;border:1px solid #e5eaf0;border-radius:14px;padding:20px 10px}.state{font-weight:820;text-transform:uppercase;letter-spacing:.09em;font-size:.84rem;color:var(--muted)}.timer{font-weight:820;letter-spacing:-.065em;font-size:clamp(4rem,10vw,7.7rem);font-variant-numeric:tabular-nums;line-height:1.25}.timer small{font-size:.26em;letter-spacing:0;margin-left:5px;color:var(--muted)}.actionRow{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:10px}.actionRow button{min-width:125px}.metrics{display:grid;grid-template-columns:repeat(2,1fr);gap:9px}.metric{background:#f8fafc;border:1px solid #e5eaf0;border-radius:13px;padding:15px;min-height:112px;display:flex;justify-content:center;flex-direction:column}.metric .label{font-size:.82rem;color:var(--muted)}.metric strong{font-size:clamp(1.45rem,3vw,2.1rem);font-variant-numeric:tabular-nums;line-height:1.5}.sectionTitle{font-size:1.04rem;margin:0 0 11px;font-weight:800}.setup{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.field{display:flex;flex-direction:column;gap:5px;min-width:0}.field label,.field .legend{font-size:.83rem;color:#475467;font-weight:700}.field select,.field input{height:42px;border:1px solid #ccd4de;border-radius:9px;padding:8px 11px;max-width:100%;background:white;color:#111827;width:100%}.hint{font-size:.76rem;color:#667085;line-height:1.4}.calibBox{margin-top:14px;padding:13px;border:1px solid #cddcf1;background:#f6f9ff;border-radius:12px}.calibActions{display:flex;gap:7px;flex-wrap:wrap;margin:9px 0}.calibActions button{padding:9px 12px}.calibInfo{font-size:.85rem;color:#334155;line-height:1.65}.calibInfo b{font-variant-numeric:tabular-nums}.more{border-top:1px solid var(--border);margin-top:13px;padding-top:11px}.more summary{font-weight:750;cursor:pointer;color:#475467}.advanced{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:11px;margin-top:12px}.chartToolbar{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px}.graph{width:100%;height:275px;display:block}.chartbtns{display:flex;gap:6px;flex-wrap:wrap}.chartbtns button{padding:7px 11px}.chartbtns button.sel{background:#e8f0ff;border-color:#93b6fb;color:#1d4ed8}.tablebar{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px}.tablebar select{padding:6px;border:1px solid var(--border);border-radius:7px;background:white}.row-delete{padding:5px 9px;font-size:.79rem;color:#b42318;border-color:#efc8c8;white-space:nowrap}.row-delete:disabled{opacity:.35}.scrollTable{max-height:400px;overflow:auto;border:1px solid var(--border);border-radius:10px}table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}th,td{border-bottom:1px solid #e9edf2;padding:8px 12px;text-align:right;white-space:nowrap}th{position:sticky;top:0;background:#f1f5f9;font-size:.82rem;color:#475467}td{font-size:.88rem}tr:last-child td{border-bottom:0}.footerHint{font-size:.78rem;color:var(--muted);margin:8px 0 0;line-height:1.5}.connectState{font-weight:700;font-size:.8rem}.connectState:empty{display:none}.realtime{font-size:.82rem;color:#475467;text-align:center;margin-top:8px}.device{font-size:.77rem;color:var(--muted)}.hidden{display:none!important}
 @media(max-width:790px){.page{padding:8px 7px 20px}.top{gap:6px}.topRight{width:100%}.hero{grid-template-columns:1fr}.timerPanel{padding:10px}.timer{font-size:clamp(3.7rem,15vw,6rem)}.metric{padding:11px;min-height:90px}.setup{grid-template-columns:1fr 1fr;gap:10px}.advanced{grid-template-columns:repeat(2,1fr)}.card{padding:12px}.graph{height:250px}}@media(max-width:420px){.setup{grid-template-columns:1fr}.timer{font-size:3.8rem}.actionRow button{min-width:108px;padding:9px}.metric strong{font-size:1.5rem}.topRight button{padding:8px 10px;font-size:.85rem}th,td{padding:7px}}
 </style>
 </head>
@@ -60,8 +60,9 @@
 <div id="resultNote" class="footerHint">Po spuštění bude aplikace čekat na skutečný pohyb vozíku.</div>
 </section>
 <section class="card">
-<div class="tablebar"><h2 class="sectionTitle" style="margin:0">Okamžité rychlosti</h2><div><label class="small muted" for="rowStep">Tabulka po </label><select id="rowStep"><option value="1">všech vzorcích</option><option value="2">2 vzorcích</option><option value="4" selected>4 vzorcích</option><option value="10">10 vzorcích</option></select> <button id="csv" disabled>Stáhnout CSV</button></div></div>
-<div class="scrollTable"><table><thead><tr><th>t (s)</th><th>s (m)</th><th>v (m/s)</th><th>a (m/s²)</th></tr></thead><tbody id="rows"><tr><td colspan="4" class="muted" style="text-align:center">Zatím žádné měření</td></tr></tbody></table></div>
+<div class="tablebar"><h2 class="sectionTitle" style="margin:0">Okamžité rychlosti</h2><div><label class="small muted" for="rowStep">Tabulka po </label><select id="rowStep"><option value="1">všech vzorcích</option><option value="2">2 vzorcích</option><option value="4" selected>4 vzorcích</option><option value="10">10 vzorcích</option></select> <button id="undoDelete" disabled>Vrátit smazání</button> <button id="csv" disabled>Stáhnout CSV</button></div></div>
+<div class="scrollTable"><table><thead><tr><th>t (s)</th><th>s (m)</th><th>v (m/s)</th><th>a (m/s²)</th><th>Úprava</th></tr></thead><tbody id="rows"><tr><td colspan="5" class="muted" style="text-align:center">Zatím žádné měření</td></tr></tbody></table></div>
+<p id="editInfo" class="footerHint" role="status">Po dokončení měření můžeš smazat jednotlivé vzorky. Změní se tím graf, rychlosti, zrychlení i výsledné hodnoty.</p>
 <p class="footerHint">Rychlosti a lokální zrychlení jsou určeny kvadratickou regresí ze sousedních vzorků. Výsledné průměrné zrychlení je počítáno jako (v<sub>konc</sub> − v<sub>poč</sub>)/t z regresních koncových rychlostí. Zobrazované hodnoty jsou orientovány ve směru jízdy a jsou přibližné.</p>
 </section>
 <p class="footerHint">Použij Chrome nebo Edge přes HTTPS. U sonaru GDX-MD je výchozí kanál <b>Motion (cart)</b> (rozsah 0,15–3,5 m). Postav vozík proti ploché odrazné destičce, aby jej sonar během celé jízdy dobře viděl. Přesné okamžiky startu a cíle jsou omezeny frekvencí vzorkování a šumem čidla.</p>
@@ -70,8 +71,8 @@
 (function(){
 "use strict";
 const $=id=>document.getElementById(id);
-const ui={phase:$("phase"),time:$("time"),message:$("message"),distance:$("distance"),vavg:$("vavg"),aavg:$("aavg"),vend:$("vend"),liveDistance:$("liveDistance"),connection:$("connection"),arm:$("arm"),abort:$("abort"),demo:$("demo"),connect:$("connect"),disconnect:$("disconnect"),direction:$("direction"),directionHint:$("directionHint"),endMode:$("endMode"),endHint:$("endHint"),target:$("target"),targetWrap:$("targetWrap"),rate:$("rate"),rateHint:$("rateHint"),trigger:$("trigger"),reverse:$("reverse"),still:$("still"),maxSec:$("maxSec"),chart:$("chart"),rows:$("rows"),rowStep:$("rowStep"),csv:$("csv"),resultNote:$("resultNote"),captureStart:$("captureStart"),captureEnd:$("captureEnd"),clearCalibration:$("clearCalibration"),calibInfo:$("calibInfo")};
-const st={device:null,sensor:null,phase:"idle",source:null,sampleIndex:0,period:0.05,lastPos:null,lastValid:null,latest:NaN,buffer:[],base:NaN,begin:NaN,peak:null,records:[],derived:[],lastDraw:0,endReason:"",demoTimer:null,chart:"s",missed:0,consecutiveReverse:0,armedAt:0,calibStart:NaN,calibEnd:NaN,qualityRejected:0,qualityWarning:""};
+const ui={phase:$("phase"),time:$("time"),message:$("message"),distance:$("distance"),vavg:$("vavg"),aavg:$("aavg"),vend:$("vend"),liveDistance:$("liveDistance"),connection:$("connection"),arm:$("arm"),abort:$("abort"),demo:$("demo"),connect:$("connect"),disconnect:$("disconnect"),direction:$("direction"),directionHint:$("directionHint"),endMode:$("endMode"),endHint:$("endHint"),target:$("target"),targetWrap:$("targetWrap"),rate:$("rate"),rateHint:$("rateHint"),trigger:$("trigger"),reverse:$("reverse"),still:$("still"),maxSec:$("maxSec"),chart:$("chart"),rows:$("rows"),rowStep:$("rowStep"),csv:$("csv"),undoDelete:$("undoDelete"),editInfo:$("editInfo"),resultNote:$("resultNote"),captureStart:$("captureStart"),captureEnd:$("captureEnd"),clearCalibration:$("clearCalibration"),calibInfo:$("calibInfo")};
+const st={device:null,sensor:null,phase:"idle",source:null,sampleIndex:0,period:0.05,lastPos:null,lastValid:null,latest:NaN,buffer:[],base:NaN,begin:NaN,peak:null,records:[],derived:[],lastDraw:0,endReason:"",demoTimer:null,chart:"s",missed:0,consecutiveReverse:0,armedAt:0,calibStart:NaN,calibEnd:NaN,qualityRejected:0,qualityWarning:"",editHistory:[],deletedCount:0};
 const settingIds=["direction","endMode","target","rate","trigger","reverse","still","maxSec","rowStep"];
 for(const key of settingIds){try{const v=localStorage.getItem("vernier-cart-time-"+key);if(v!=null)ui[key].value=v}catch(_){}}
 for(const key of settingIds)ui[key].addEventListener("change",()=>{try{localStorage.setItem("vernier-cart-time-"+key,ui[key].value)}catch(_){ }renderOptions();});
@@ -93,6 +94,7 @@ function setPhase(p,description){
  ui.captureStart.disabled=ui.captureEnd.disabled=!canCapture;
  ui.clearCalibration.disabled=!canCapture||(!Number.isFinite(st.calibStart)&&!Number.isFinite(st.calibEnd));
  ui.csv.disabled=!st.derived.length;
+ ui.undoDelete.disabled=p==="armed"||p==="moving"||st.editHistory.length===0;
 }
 function renderOptions(){
  ui.targetWrap.classList.toggle("hidden",ui.endMode.value!=="distance");
@@ -157,16 +159,56 @@ function calculateDerivatives(points){
   return {...p,v:m[1][3],a:2*m[2][3]};
  });
 }
+function canEditSamples(){return st.phase!=="armed"&&st.phase!=="moving"}
+function updateEditInfo(message){
+ ui.undoDelete.disabled=!canEditSamples()||st.editHistory.length===0;
+ ui.editInfo.textContent=message||(
+  st.deletedCount
+   ?"Vyřazené vzorky: "+st.deletedCount+". Graf, tabulka i výsledné veličiny jsou přepočítané ze zbývajících dat."
+   :"Po dokončení měření můžeš smazat jednotlivé vzorky. Změní se tím graf, rychlosti, zrychlení i výsledné hodnoty."
+ );
+}
 function redrawTable(){
  const a=st.derived,step=Number(ui.rowStep.value)||4;
- if(!a.length){ui.rows.innerHTML='<tr><td colspan="4" class="muted" style="text-align:center">Zatím žádné měření</td></tr>';return}
- const subset=a.filter((_,i)=>i%step===0||i===a.length-1);
- ui.rows.innerHTML=subset.map(p=>"<tr><td>"+fmt(p.t,3)+"</td><td>"+fmt(p.s,3)+"</td><td>"+fmt(p.v,3)+"</td><td>"+fmt(p.a,3)+"</td></tr>").join("");
+ const scroll=ui.rows.closest(".scrollTable");
+ const previousScroll=scroll?scroll.scrollTop:0;
+ if(!a.length){
+  ui.rows.innerHTML='<tr><td colspan="5" class="muted" style="text-align:center">Zatím žádné měření</td></tr>';
+ }else{
+  const subset=a.map((p,i)=>({p,i})).filter(({i})=>i%step===0||i===a.length-1);
+  const disabled=canEditSamples()?"":" disabled";
+  ui.rows.innerHTML=subset.map(({p,i})=>"<tr><td>"+fmt(p.t,3)+"</td><td>"+fmt(p.s,3)+"</td><td>"+fmt(p.v,3)+"</td><td>"+fmt(p.a,3)+'</td><td><button type="button" class="row-delete" data-delete-index="'+i+'" aria-label="Smazat vzorek v čase '+fmt(p.t,3)+' s"'+disabled+'>Smazat</button></td></tr>').join("");
+ }
+ if(scroll)scroll.scrollTop=previousScroll;
 }
 function refreshResults(){
  st.derived=calculateDerivatives(st.records);
  ui.csv.disabled=!st.derived.length;
- updateKPIs();redrawTable();draw();
+ updateKPIs();redrawTable();draw();updateEditInfo();
+}
+function deleteSample(index){
+ // Odstraňujeme samotný bod z výpočtových dat, ne pouze řádek tabulky.
+ // V průběhu jízdy nelze data ručně měnit.
+ if(!canEditSamples()||!Number.isInteger(index)||index<0||index>=st.records.length)return;
+ const removed=st.records[index];
+ st.editHistory.push(st.records.map(p=>({...p})));
+ st.records.splice(index,1);
+ if(index===0&&st.records.length){
+  // Po odstranění počátečního vzorku začne zbylé měření od jeho nového
+  // prvního vzorku, aby t=0 a s=0 zůstalo fyzikálně konzistentní.
+  const first=st.records[0];
+  st.records=st.records.map(p=>({t:p.t-first.t,s:Math.max(0,p.s-first.s)}));
+ }
+ st.deletedCount++;
+ refreshResults();
+ updateEditInfo("Smazán vzorek t = "+fmt(removed.t,3)+" s. Vyřazeno celkem "+st.deletedCount+" vzorků. Výsledky přepočítány; poslední smazání můžeš vrátit.");
+}
+function undoSampleDeletion(){
+ if(!canEditSamples()||!st.editHistory.length)return;
+ st.records=st.editHistory.pop();
+ st.deletedCount=Math.max(0,st.deletedCount-1);
+ refreshResults();
+ updateEditInfo("Poslední smazání vráceno. Zbývá vyřazeno "+st.deletedCount+" vzorků.");
 }
 function arm(){
  if(!modeReady())return;
@@ -187,7 +229,7 @@ function arm(){
  const diffs=recent.map(p=>Math.abs(p.d-mid)).sort((a,b)=>a-b);
  st.stationaryNoise=diffs[Math.floor(diffs.length/2)]||0;
  st.lastStill={t:recent[recent.length-1].t,d:recent[recent.length-1].d};
- st.base=mid;st.demoStart=st.sampleIndex*st.period;st.demoOffset=sign()*(mid-(sign()===1?0.40:1.8));st.begin=NaN;st.peak=null;st.records=[];st.derived=[];st.consecutiveReverse=0;st.armedAt=recent[recent.length-1].t;st.endReason="";
+ st.base=mid;st.demoStart=st.sampleIndex*st.period;st.demoOffset=sign()*(mid-(sign()===1?0.40:1.8));st.begin=NaN;st.peak=null;st.records=[];st.derived=[];st.editHistory=[];st.deletedCount=0;st.consecutiveReverse=0;st.armedAt=recent[recent.length-1].t;st.endReason="";
  st.buffer=recent.slice(-12);
  ui.resultNote.textContent="Čekám na rozjezd. Čas 0 s bude poslední stabilní vzorek těsně před začátkem pohybu.";
  setPhase("armed","Vozík připraven. Pusť závaží.");
@@ -520,6 +562,12 @@ function downloadCSV(){
 ui.captureStart.addEventListener("click",()=>capture("start"));ui.captureEnd.addEventListener("click",()=>capture("end"));ui.clearCalibration.addEventListener("click",clearCalibration);
 ui.arm.addEventListener("click",arm);ui.abort.addEventListener("click",manualEnd);ui.demo.addEventListener("click",startDemo);ui.connect.addEventListener("click",connect);ui.disconnect.addEventListener("click",disconnect);
 ui.csv.addEventListener("click",downloadCSV);ui.rowStep.addEventListener("change",redrawTable);
+ui.undoDelete.addEventListener("click",undoSampleDeletion);
+ui.rows.addEventListener("click",event=>{
+ const button=event.target.closest("button[data-delete-index]");
+ if(!button||!ui.rows.contains(button))return;
+ deleteSample(Number(button.dataset.deleteIndex));
+});
 document.querySelectorAll("[data-chart]").forEach(b=>b.addEventListener("click",()=>{st.chart=b.dataset.chart;document.querySelectorAll("[data-chart]").forEach(x=>x.classList.toggle("sel",x===b));draw()}));
 if(!navigator.bluetooth){$("ble").disabled=true;$("bleLabel").title="Tento prohlížeč nepodporuje Web Bluetooth";if(navigator.hid)$("usb").checked=true}
 if(!navigator.hid){$("usb").disabled=true;$("usbLabel").title="Tento prohlížeč nepodporuje USB WebHID";if(navigator.bluetooth)$("ble").checked=true}
