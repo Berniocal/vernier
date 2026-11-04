@@ -1,0 +1,359 @@
+<!doctype html>
+<html lang="cs">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#f4f5f7">
+<title>Čas jízdy vozíku · Vernier Go Direct</title>
+<script src="https://unpkg.com/@vernier/godirect/dist/godirect.min.umd.js"></script>
+<style>
+:root{--bg:#f4f5f7;--card:#fff;--text:#111827;--muted:#667085;--border:#dbe1e8;--accent:#2563eb;--green:#15803d;--warn:#b45309;--red:#b42318}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:15px system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}button,input,select{font:inherit}button{cursor:pointer;border:1px solid var(--border);border-radius:10px;background:#fff;color:inherit;padding:10px 13px;font-weight:700}button:disabled{opacity:.42;cursor:not-allowed}button:not(:disabled):hover{filter:brightness(.96)}.primary{background:#111827;color:white;border-color:#111827}.blue{background:#2563eb;border-color:#2563eb;color:white}.danger{color:#b42318}.page{max-width:1150px;margin:auto;padding:14px 14px 35px}.top{display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:space-between;margin-bottom:13px}h1{font-size:clamp(1.3rem,3vw,1.9rem);letter-spacing:-.035em;margin:0}.topRight{display:flex;gap:7px;flex-wrap:wrap;align-items:center}.seg{display:flex;padding:3px;border-radius:12px;background:#e8edf3;border:1px solid #d6dde7;gap:2px}.seg label{position:relative;border-radius:9px;padding:7px 10px;font-size:.86rem;font-weight:750;cursor:pointer}.seg label:has(input:checked){background:white;box-shadow:0 1px 4px #0002}.seg input{position:absolute;opacity:0}.seg label:has(input:disabled){opacity:.38}.card{background:var(--card);border:1px solid var(--border);border-radius:17px;box-shadow:0 1px 3px #0f172a0a;padding:17px;margin:0 0 12px}.banner{font-weight:750;font-size:.92rem;margin-bottom:7px}.muted{color:var(--muted)}.small{font-size:.82rem;line-height:1.5}.good{color:var(--green)}.warn{color:var(--warn)}.error{color:var(--red)}.hero{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:14px;align-items:stretch}.timerPanel{display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;background:#f8fafc;border:1px solid #e5eaf0;border-radius:14px;padding:20px 10px}.state{font-weight:820;text-transform:uppercase;letter-spacing:.09em;font-size:.84rem;color:var(--muted)}.timer{font-weight:820;letter-spacing:-.065em;font-size:clamp(4rem,10vw,7.7rem);font-variant-numeric:tabular-nums;line-height:1.25}.timer small{font-size:.26em;letter-spacing:0;margin-left:5px;color:var(--muted)}.actionRow{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:10px}.actionRow button{min-width:125px}.metrics{display:grid;grid-template-columns:repeat(2,1fr);gap:9px}.metric{background:#f8fafc;border:1px solid #e5eaf0;border-radius:13px;padding:15px;min-height:112px;display:flex;justify-content:center;flex-direction:column}.metric .label{font-size:.82rem;color:var(--muted)}.metric strong{font-size:clamp(1.45rem,3vw,2.1rem);font-variant-numeric:tabular-nums;line-height:1.5}.sectionTitle{font-size:1.04rem;margin:0 0 11px;font-weight:800}.setup{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.field{display:flex;flex-direction:column;gap:5px;min-width:0}.field label,.field .legend{font-size:.83rem;color:#475467;font-weight:700}.field select,.field input{height:42px;border:1px solid #ccd4de;border-radius:9px;padding:8px 11px;max-width:100%;background:white;color:#111827;width:100%}.hint{font-size:.76rem;color:#667085;line-height:1.4}.more{border-top:1px solid var(--border);margin-top:13px;padding-top:11px}.more summary{font-weight:750;cursor:pointer;color:#475467}.advanced{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:11px;margin-top:12px}.chartToolbar{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px}.graph{width:100%;height:275px;display:block}.chartbtns{display:flex;gap:6px;flex-wrap:wrap}.chartbtns button{padding:7px 11px}.chartbtns button.sel{background:#e8f0ff;border-color:#93b6fb;color:#1d4ed8}.tablebar{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px}.tablebar select{padding:6px;border:1px solid var(--border);border-radius:7px;background:white}.scrollTable{max-height:400px;overflow:auto;border:1px solid var(--border);border-radius:10px}table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}th,td{border-bottom:1px solid #e9edf2;padding:8px 12px;text-align:right;white-space:nowrap}th{position:sticky;top:0;background:#f1f5f9;font-size:.82rem;color:#475467}td{font-size:.88rem}tr:last-child td{border-bottom:0}.footerHint{font-size:.78rem;color:var(--muted);margin:8px 0 0;line-height:1.5}.connectState{font-weight:700;font-size:.8rem}.connectState:empty{display:none}.realtime{font-size:.82rem;color:#475467;text-align:center;margin-top:8px}.device{font-size:.77rem;color:var(--muted)}.hidden{display:none!important}
+@media(max-width:790px){.page{padding:8px 7px 20px}.top{gap:6px}.topRight{width:100%}.hero{grid-template-columns:1fr}.timerPanel{padding:10px}.timer{font-size:clamp(3.7rem,15vw,6rem)}.metric{padding:11px;min-height:90px}.setup{grid-template-columns:1fr 1fr;gap:10px}.advanced{grid-template-columns:repeat(2,1fr)}.card{padding:12px}.graph{height:250px}}@media(max-width:420px){.setup{grid-template-columns:1fr}.timer{font-size:3.8rem}.actionRow button{min-width:108px;padding:9px}.metric strong{font-size:1.5rem}.topRight button{padding:8px 10px;font-size:.85rem}th,td{padding:7px}}
+</style>
+</head>
+<body><main class="page">
+<header class="top"><h1>Čas jízdy vozíku</h1><div class="topRight">
+<div class="seg" role="radiogroup" aria-label="Připojení"><label id="bleLabel"><input id="ble" name="transport" type="radio" value="ble" checked>Bluetooth</label><label id="usbLabel"><input id="usb" name="transport" type="radio" value="usb">USB</label></div>
+<button id="connect" class="primary">Připojit sonar</button><button id="disconnect" disabled>Odpojit</button>
+</div></header>
+<section class="card">
+<div class="hero">
+<div class="timerPanel">
+<div id="phase" class="state">Nepřipojeno</div><div class="timer"><span id="time">0,000</span><small>s</small></div>
+<div id="message" class="small muted" role="status">Připoj Go Direct Motion Detector (GDX-MD).</div>
+<div class="actionRow"><button id="arm" class="blue" disabled>Spustit měření</button><button id="abort" disabled>Ukončit ručně</button><button id="demo">Vyzkoušet ukázku</button></div>
+<div class="realtime">Aktuální vzdálenost: <b id="liveDistance">—</b> m · <span id="connection" class="connectState">nepřipojeno</span></div>
+</div>
+<div class="metrics">
+<div class="metric"><span class="label">Ujetá dráha</span><strong><span id="distance">—</span> m</strong></div>
+<div class="metric"><span class="label">Průměrná rychlost</span><strong><span id="vavg">—</span> m/s</strong></div>
+<div class="metric"><span class="label">Průměrné zrychlení</span><strong><span id="aavg">—</span> m/s²</strong></div>
+<div class="metric"><span class="label">Koncová rychlost</span><strong><span id="vend">—</span> m/s</strong></div>
+</div>
+</div>
+</section>
+<section class="card">
+<h2 class="sectionTitle">Nastavení pokusu</h2>
+<div class="setup">
+<div class="field"><label for="direction">Umístění sonaru a směr jízdy</label><select id="direction"><option value="away">Sonar u startu – vozík odjíždí</option><option value="toward">Sonar u cíle – vozík přijíždí</option></select><span class="hint" id="directionHint">Vzdálenost roste. Zastavit při prvním maximu / obratu.</span></div>
+<div class="field"><label for="endMode">Kdy měření skončí</label><select id="endMode"><option value="turn">Automaticky při zastavení nebo obratu</option><option value="distance">Po ujetí zadané dráhy</option></select><span class="hint" id="endHint">Odraz a návrat se nezapočítají.</span></div>
+<div id="targetWrap" class="field hidden"><label for="target">Požadovaná dráha (m)</label><input id="target" type="number" min="0.02" max="3.3" step="0.05" value="0.8"><span class="hint">Čas se dopočítá mezi dvěma vzorky.</span></div>
+<div class="field"><label for="rate">Frekvence sonaru</label><select id="rate"><option value="20">20 Hz (doporučeno)</option><option value="30">30 Hz (maximum)</option><option value="10">10 Hz</option></select><span class="hint" id="rateHint">Jeden vzorek každých 0,05 s.</span></div>
+</div>
+<details class="more"><summary>Pokročilá nastavení detekce</summary><div class="advanced">
+<div class="field"><label for="trigger">Potvrzení rozjezdu (mm)</label><input id="trigger" type="number" min="3" max="60" value="10" step="1"></div>
+<div class="field"><label for="reverse">Rozpoznání návratu (mm)</label><input id="reverse" type="number" min="5" max="100" value="15" step="1"></div>
+<div class="field"><label for="still">Klid na konci (ms)</label><input id="still" type="number" min="250" max="1500" value="500" step="50"></div>
+<div class="field"><label for="maxSec">Nejdelší měření (s)</label><input id="maxSec" type="number" min="1" max="60" value="12" step="1"></div>
+</div><p class="hint">Rozjezd se určuje zpětně z prvních milimetrů pohybu. Prahy omezují falešná spuštění způsobená šumem ultrazvukového měření. Pokud sonar vozík přestane vidět, měření lze ukončit ručně; neznámý okamžik průjezdu se neodhaduje.</p></details>
+</section>
+<section class="card">
+<div class="chartToolbar"><h2 class="sectionTitle" style="margin:0">Průběh jízdy</h2><div class="chartbtns"><button class="sel" data-chart="s">Dráha s(t)</button><button data-chart="v">Rychlost v(t)</button></div></div>
+<canvas id="chart" class="graph" aria-label="Graf průběhu jízdy"></canvas>
+<div id="resultNote" class="footerHint">Po spuštění bude aplikace čekat na skutečný pohyb vozíku.</div>
+</section>
+<section class="card">
+<div class="tablebar"><h2 class="sectionTitle" style="margin:0">Okamžité rychlosti</h2><div><label class="small muted" for="rowStep">Tabulka po </label><select id="rowStep"><option value="1">všech vzorcích</option><option value="2">2 vzorcích</option><option value="4" selected>4 vzorcích</option><option value="10">10 vzorcích</option></select> <button id="csv" disabled>Stáhnout CSV</button></div></div>
+<div class="scrollTable"><table><thead><tr><th>t (s)</th><th>s (m)</th><th>v (m/s)</th><th>a (m/s²)</th></tr></thead><tbody id="rows"><tr><td colspan="4" class="muted" style="text-align:center">Zatím žádné měření</td></tr></tbody></table></div>
+<p class="footerHint">Rychlosti a lokální zrychlení jsou určeny kvadratickou regresí ze sousedních vzorků. Výsledné průměrné zrychlení je počítáno jako (v<sub>konc</sub> − v<sub>poč</sub>)/t z regresních koncových rychlostí. Zobrazované hodnoty jsou orientovány ve směru jízdy a jsou přibližné.</p>
+</section>
+<p class="footerHint">Použij Chrome nebo Edge přes HTTPS. U sonaru GDX-MD je výchozí kanál <b>Motion (cart)</b> (rozsah 0,15–3,5 m). Postav vozík proti ploché odrazné destičce, aby jej sonar během celé jízdy dobře viděl. Přesné okamžiky startu a cíle jsou omezeny frekvencí vzorkování a šumem čidla.</p>
+</main>
+<script>
+(function(){
+"use strict";
+const $=id=>document.getElementById(id);
+const ui={phase:$("phase"),time:$("time"),message:$("message"),distance:$("distance"),vavg:$("vavg"),aavg:$("aavg"),vend:$("vend"),liveDistance:$("liveDistance"),connection:$("connection"),arm:$("arm"),abort:$("abort"),demo:$("demo"),connect:$("connect"),disconnect:$("disconnect"),direction:$("direction"),directionHint:$("directionHint"),endMode:$("endMode"),endHint:$("endHint"),target:$("target"),targetWrap:$("targetWrap"),rate:$("rate"),rateHint:$("rateHint"),trigger:$("trigger"),reverse:$("reverse"),still:$("still"),maxSec:$("maxSec"),chart:$("chart"),rows:$("rows"),rowStep:$("rowStep"),csv:$("csv"),resultNote:$("resultNote")};
+const st={device:null,sensor:null,phase:"idle",source:null,sampleIndex:0,period:0.05,lastPos:null,lastValid:null,latest:NaN,buffer:[],base:NaN,begin:NaN,peak:null,records:[],derived:[],lastDraw:0,endReason:"",demoTimer:null,chart:"s",missed:0,consecutiveReverse:0,armedAt:0};
+const settingIds=["direction","endMode","target","rate","trigger","reverse","still","maxSec","rowStep"];
+for(const key of settingIds){try{const v=localStorage.getItem("vernier-cart-time-"+key);if(v!=null)ui[key].value=v}catch(_){}}
+for(const key of settingIds)ui[key].addEventListener("change",()=>{try{localStorage.setItem("vernier-cart-time-"+key,ui[key].value)}catch(_){ }renderOptions();});
+const fmt=(n,d=3)=>Number.isFinite(n)?n.toLocaleString("cs-CZ",{minimumFractionDigits:d,maximumFractionDigits:d}):"—";
+function setMessage(t){ui.message.textContent=t}
+function sign(){return ui.direction.value==="away"?1:-1}
+function rate(){return Number(ui.rate.value)||20}
+function modeReady(){return st.source==="sensor"||st.source==="demo"}
+function setPhase(p,description){
+ st.phase=p;
+ const title={idle:"Připraveno",armed:"Čekám na rozjezd",moving:"Vozík jede",finished:"Hotovo"}[p]||p;
+ ui.phase.textContent=title;
+ if(description)setMessage(description);
+ ui.arm.disabled=!modeReady()||(p==="armed"||p==="moving");
+ ui.abort.disabled=!(p==="armed"||p==="moving");
+ ui.arm.textContent=p==="finished"?"Nové měření":"Spustit měření";
+ for(const id of settingIds){if(id!=="rowStep")ui[id].disabled=p==="armed"||p==="moving"}
+ ui.csv.disabled=!st.derived.length;
+}
+function renderOptions(){
+ ui.targetWrap.classList.toggle("hidden",ui.endMode.value!=="distance");
+ ui.directionHint.textContent=ui.direction.value==="away"?"Vzdálenost roste; konec na prvním maximu.":"Vzdálenost klesá; konec na prvním minimu.";
+ ui.endHint.textContent=ui.endMode.value==="distance"?"Ukončení po přesně zadané dráze.":"Odraz a návrat se nezapočítají.";
+ ui.rateHint.textContent="Jeden vzorek každých "+fmt(1/rate(),3)+" s.";
+}
+function updateKPIs(){
+ const arr=st.derived, rec=st.records, last=arr[arr.length-1];
+ if(!rec.length){ui.time.textContent="0,000";ui.distance.textContent=ui.vavg.textContent=ui.aavg.textContent=ui.vend.textContent="—";return}
+ const T=rec[rec.length-1].t;
+ const s=rec[rec.length-1].s;
+ ui.time.textContent=fmt(T,3);
+ ui.distance.textContent=fmt(s,3);
+ ui.vavg.textContent=T>0?fmt(s/T,3):"—";
+ if(last){ui.vend.textContent=fmt(last.v,3);const first=arr[0];ui.aavg.textContent=T>0&&Number.isFinite(first.v)&&Number.isFinite(last.v)?fmt((last.v-first.v)/T,3):"—"}
+ else{ui.vend.textContent="—";ui.aavg.textContent="—"}
+}
+function calculateDerivatives(points){
+ if(points.length<3)return points.map(p=>({...p,v:NaN,a:NaN}));
+ const n=points.length;
+ return points.map((p,i)=>{
+  const want=Math.min(9,n),half=Math.floor(want/2);
+  let lo=Math.max(0,i-half),hi=Math.min(n-1,lo+want-1);lo=Math.max(0,hi-want+1);
+  let s0=0,s1=0,s2=0,s3=0,s4=0,sy=0,sty=0,st2y=0;
+  for(let j=lo;j<=hi;j++){const x=points[j].t-p.t,y=points[j].s,q=x*x;s0++;s1+=x;s2+=q;s3+=q*x;s4+=q*q;sy+=y;sty+=x*y;st2y+=q*y}
+  const m=[[s0,s1,s2,sy],[s1,s2,s3,sty],[s2,s3,s4,st2y]];
+  for(let c=0;c<3;c++){let piv=c;for(let r=c+1;r<3;r++)if(Math.abs(m[r][c])>Math.abs(m[piv][c]))piv=r;if(Math.abs(m[piv][c])<1e-12)return {...p,v:NaN,a:NaN};if(piv!==c)[m[c],m[piv]]=[m[piv],m[c]];const div=m[c][c];for(let k=c;k<4;k++)m[c][k]/=div;for(let r=0;r<3;r++){if(r===c)continue;const f=m[r][c];for(let k=c;k<4;k++)m[r][k]-=f*m[c][k]}}
+  return {...p,v:m[1][3],a:2*m[2][3]};
+ });
+}
+function redrawTable(){
+ const a=st.derived,step=Number(ui.rowStep.value)||4;
+ if(!a.length){ui.rows.innerHTML='<tr><td colspan="4" class="muted" style="text-align:center">Zatím žádné měření</td></tr>';return}
+ const subset=a.filter((_,i)=>i%step===0||i===a.length-1);
+ ui.rows.innerHTML=subset.map(p=>"<tr><td>"+fmt(p.t,3)+"</td><td>"+fmt(p.s,3)+"</td><td>"+fmt(p.v,3)+"</td><td>"+fmt(p.a,3)+"</td></tr>").join("");
+}
+function refreshResults(){
+ st.derived=calculateDerivatives(st.records);
+ ui.csv.disabled=!st.derived.length;
+ updateKPIs();redrawTable();draw();
+}
+function arm(){
+ if(!modeReady())return;
+ const recent=st.buffer.filter(p=>p.valid).slice(-12);
+ if(recent.length<5){setMessage("Ještě čekám na několik platných hodnot vzdálenosti.");return}
+ const sorted=recent.map(p=>p.d).sort((a,b)=>a-b);
+ const mid=sorted[Math.floor(sorted.length/2)];
+ if(sorted[sorted.length-1]-sorted[0]>0.015){setMessage("Vozík se ještě pohybuje nebo měření kolísá. Ustav vozík do klidu.");return}
+ st.base=mid;st.begin=NaN;st.peak=null;st.records=[];st.derived=[];st.consecutiveReverse=0;st.armedAt=recent[recent.length-1].t;st.endReason="";
+ st.buffer=recent.slice(-12);
+ ui.resultNote.textContent="Čekám na pohyb ve zvoleném směru. Čas začne běžet až při skutečném rozjezdu.";
+ setPhase("armed","Vozík připraven. Pusť závaží.");
+ refreshResults();
+}
+function finish(endTime,reason){
+ if(st.phase!=="moving")return;
+ st.records=st.records.filter(p=>p.t<=endTime+1e-7);
+ if(st.records.length===0){setPhase("idle","Nepodařilo se získat data jízdy.");return}
+ const last=st.records[st.records.length-1];
+ if(last.t<endTime&&st.peak&&Math.abs(st.peak.t-endTime)<1e-6){st.records.push({t:endTime,s:Math.max(0,st.peak.s)})}
+ st.endReason=reason;
+ setPhase("finished",reason);
+ ui.resultNote.textContent=reason+" Zaznamenána pouze první jízda; zpětný pohyb se nezapočítává.";
+ refreshResults();
+}
+function onPoint(distance,fromDemo){
+ // Časová osa vychází z periody senzoru. Několik hodnot v jednom BLE paketu
+ // tedy nikdy nesplyne do jednoho okamžiku podle performance.now().
+ const tick=st.sampleIndex++;
+ const t=tick*st.period;
+ const min=0.15,max=3.5;
+ const valid=Number.isFinite(distance)&&distance>=min&&distance<=max;
+ if(!valid){st.buffer.push({t,d:NaN,valid:false});if(st.buffer.length>80)st.buffer.shift();st.missed++;if(st.phase==="moving"&&st.missed>=8)setMessage("Sonar ztratil vozík. Zkontroluj odraznou destičku nebo měření ukonči ručně.");return}
+ st.missed=0;
+ // Jednotlivé falešné ultrazvukové odrazy se nesmí stát novým koncem dráhy.
+ if(st.lastValid&&Math.abs(distance-st.lastValid.d)>Math.max(0.22,5*st.period)){
+  st.buffer.push({t,d:NaN,valid:false});if(st.buffer.length>80)st.buffer.shift();return;
+ }
+ st.lastValid={t,d:distance};
+ st.latest=distance;ui.liveDistance.textContent=fmt(distance,3);
+ st.buffer.push({t,d:distance,valid:true});if(st.buffer.length>80)st.buffer.shift();
+ if(st.phase!=="armed"&&st.phase!=="moving")return;
+ if(st.phase==="armed"){
+  const projected=sign()*(distance-st.base);
+  const threshold=Math.max(0.003,Number(ui.trigger.value)/1000||0.01);
+  if(projected<threshold)return;
+  // Předpotvrzení pohybu: alespoň dvě nedávné hodnoty musí ukazovat
+  // stejný směr, aby samotný jednorázový ultrazvukový šum nespustil čas.
+  const near=st.buffer.filter(p=>p.valid&&p.t>=t-0.25);
+  if(near.length<3||sign()*(near[near.length-1].d-near[Math.max(0,near.length-3)].d)<0.002)return;
+  const onset=Math.max(0.002,Math.min(threshold*0.3,0.004));
+  let first=st.buffer.filter(p=>p.valid&&p.t>=st.armedAt).find(p=>sign()*(p.d-st.base)>=onset);
+  if(!first)first={t,d:distance};
+  st.begin=first.t;
+  st.records=st.buffer.filter(p=>p.valid&&p.t>=st.begin&&p.t<=t)
+    .map(p=>({t:p.t-st.begin,s:Math.max(0,sign()*(p.d-st.base))}));
+  // Nulový bod pro s(0), bez extrapolace před detekovanou první změnu.
+  if(st.records.length)st.records[0].s=0;
+  st.peak={t:st.records[st.records.length-1].t,s:Math.max(...st.records.map(p=>p.s))};
+  setPhase("moving","Měřím první jízdu...");
+  refreshResults();
+  return;
+ }
+ if(st.phase!=="moving")return;
+ const rel=t-st.begin,s=sign()*(distance-st.base);
+ if(rel<0||s<-0.04)return;
+ let current={t:rel,s:Math.max(0,s)};
+ const previous=st.records[st.records.length-1];
+ if(previous&&current.t<=previous.t)return;
+ const target=Number(ui.target.value);
+ if(ui.endMode.value==="distance"&&Number.isFinite(target)&&target>0&&previous&&previous.s<target&&current.s>=target){
+  const f=(target-previous.s)/(current.s-previous.s);
+  st.records.push({t:previous.t+f*(current.t-previous.t),s:target});
+  finish(st.records[st.records.length-1].t,"Dokončena zadaná dráha "+fmt(target,3)+" m.");
+  return;
+ }
+ st.records.push(current);
+ if(!st.peak||current.s>st.peak.s+0.001)st.peak={t:rel,s:current.s};
+ // Otočení: počkáme na potvrzený ústup od maxima, čas však ukončíme v maximu.
+ const reverse=Math.max(0.005,Number(ui.reverse.value)/1000||0.015);
+ if(st.peak.s-current.s>=reverse)st.consecutiveReverse++;else st.consecutiveReverse=0;
+ if(ui.endMode.value==="turn"&&st.peak.s>=0.04&&st.consecutiveReverse>=2){
+  finish(st.peak.t,"Zachycen první obrat vozíku.");
+  return;
+ }
+ // Bez odrazu se vozík může v konci zastavit. Tuto situaci detekujeme
+ // až po dlouhém klidu blízko dosaženého maxima.
+ const still=Math.max(0.25,Number(ui.still.value)/1000||0.5);
+ if(ui.endMode.value==="turn"&&st.peak.s>=0.04&&rel-st.peak.t>=still&&st.peak.s-current.s<0.006){
+  const tail=st.records.filter(p=>p.t>=rel-still);
+  const span=tail.length?Math.max(...tail.map(p=>p.s))-Math.min(...tail.map(p=>p.s)):Infinity;
+  if(span<=0.008){finish(st.peak.t,"Vozík se zastavil na konci dráhy.");return}
+ }
+ const maxSec=Number(ui.maxSec.value)||12;
+ if(rel>=maxSec){finish(Math.min(st.peak.t,rel),"Dosažen nastavený časový limit; použito poslední maximum.");return}
+ if(st.records.length%4===0)refreshResults();else updateKPIs();
+}
+function manualEnd(){
+ if(st.phase==="armed"){setPhase("idle","Měření zrušeno před rozjezdem.");return}
+ if(st.phase==="moving"){finish(st.peak?st.peak.t:st.records[st.records.length-1].t,"Ukončeno ručně; použit poslední dosažený krajní bod.");return}
+}
+function resetDevice(message){
+ st.device=null;st.sensor=null;st.source=null;st.lastValid=null;st.buffer=[];st.phase="idle";
+ ui.connect.disabled=false;ui.disconnect.disabled=true;ui.connection.textContent=message||"nepřipojeno";
+ ui.arm.disabled=true;ui.abort.disabled=true;ui.demo.disabled=false;ui.connect.textContent="Připojit sonar";
+ for(const id of settingIds)if(id!=="rowStep")ui[id].disabled=false;
+ ui.phase.textContent="Nepřipojeno";setMessage(message||"Připoj sonar.");
+}
+function toMeters(v,unit){const n=Number(v);if(!Number.isFinite(n))return NaN;const u=String(unit||"m").toLowerCase().trim();return u==="cm"?n/100:u==="mm"?n/1000:n}
+function selectMotion(device){
+ const a=device.sensors||[];
+ return a.find(s=>/cart|voz[ií]k/i.test(String(s.name||"")))
+ ||a.find(s=>/^(motion|distance|position|pohyb)/i.test(String(s.name||""))&&/^(m|cm|mm)$/i.test(String(s.unit||"m")))
+ ||a.find(s=>Number(s.number)===5)
+ ||a.find(s=>/^(m|cm|mm)$/i.test(String(s.unit||"")))
+ ||null;
+}
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+async function bluetoothConnect(){
+ // Stejný opakovaný GATT handshake jako ve fungující aplikaci Siloměry.
+ const native=await navigator.bluetooth.requestDevice({filters:[{namePrefix:"GDX"}],optionalServices:["d91714ef-28b9-4f91-ba16-f0d9a604f112"]});
+ for(let attempt=0;attempt<2;attempt++){
+  let response=null,listener=null,closed=null;
+  function cleanup(){if(response&&listener)response.removeEventListener("characteristicvaluechanged",listener);if(closed)native.removeEventListener("gattserverdisconnected",closed)}
+  const adapter={godirectAdapter:true,maxPacketLength:20,
+   async setup({onClosed,onResponse}){
+    closed=()=>{cleanup();onClosed()};native.addEventListener("gattserverdisconnected",closed);
+    const server=await native.gatt.connect();
+    const service=await server.getPrimaryService("d91714ef-28b9-4f91-ba16-f0d9a604f112");
+    this.command=await service.getCharacteristic("f4bf14a6-c7d5-4b6d-8aa8-df1a7c83adcb");
+    response=await service.getCharacteristic("b41e6675-a329-40e0-aa01-44d2f444babe");
+    listener=e=>onResponse(e.target.value);response.addEventListener("characteristicvaluechanged",listener);await response.startNotifications();
+   },
+   async writeCommand(data){await this.command.writeValue(data)},
+   async close(){native.gatt.disconnect();cleanup()}
+  };
+  try{const d=await godirect.createDevice(adapter,{open:false,startMeasurements:false});await d.open(false);return d}
+  catch(e){cleanup();try{native.gatt.disconnect()}catch(_){ }if(attempt===1)throw e;ui.connection.textContent="opakování spojení…";await sleep(800)}
+ }
+}
+async function connect(){
+ if(st.source)return;
+ ui.connect.disabled=true;ui.connection.textContent="připojuji…";
+ try{
+  if(!window.godirect)throw Error("Knihovna Vernier nebyla načtena. Zkontroluj přístup k internetu.");
+  const ble=document.querySelector('input[name="transport"]:checked').value==="ble";
+  if(ble&&!navigator.bluetooth)throw Error("Web Bluetooth není dostupný. Použij Chrome/Edge.");
+  if(!ble&&!navigator.hid)throw Error("USB přes WebHID není dostupné. Použij Chrome/Edge.");
+  const d=ble?await bluetoothConnect():await godirect.selectDevice(false);
+  if(!d)throw Error("Zařízení nebylo vybráno.");
+  st.device=d;
+  d.on("device-closed",()=>{if(st.device===d){if(st.phase==="moving")manualEnd();resetDevice("odpojeno")}});
+  try{await d.stop()}catch(_){}
+  if(typeof d.enableDefaultSensors==="function")d.enableDefaultSensors();
+  const sensor=selectMotion(d);
+  if(!sensor)throw Error("Nenašel jsem kanál polohy Go Direct Motion.");
+  for(const s of d.sensors||[]){try{if(typeof s.setEnabled==="function")s.setEnabled(s===sensor);else s.enabled=s===sensor}catch(_){}}
+  if(!sensor.enabled){try{if(typeof sensor.setEnabled==="function")sensor.setEnabled(true);else sensor.enabled=true}catch(_){}}
+  st.sensor=sensor;st.source="sensor";st.sampleIndex=0;st.period=1/rate();st.buffer=[];st.lastValid=null;st.latest=NaN;st.missed=0;
+  sensor.on("value-changed",s=>{if(st.device!==d)return;onPoint(toMeters(s.value,s.unit),false)});
+  await d.start(1000/rate());
+  st.connectionTime=performance.now();
+  ui.connection.textContent=(d.name||"Go Direct")+" · "+(sensor.name||"Motion")+" · "+(ble?"BT":"USB");
+  ui.disconnect.disabled=false;ui.connect.textContent="Připojeno";ui.demo.disabled=true;
+  setPhase("idle","Ustav vozík a stiskni Spustit měření.");
+ }catch(e){
+  console.error(e);
+  try{if(st.device)await st.device.close()}catch(_){}
+  const cancelled=e.name==="NotFoundError"||/cancel|No device selected|Nebylo vybráno/i.test(String(e));
+  resetDevice(cancelled?"výběr zrušen":"chyba připojení");
+  if(!cancelled)alert(e.message||String(e));
+ }finally{ui.connect.disabled=!!st.device}
+}
+async function disconnect(){
+ if(st.source==="demo"){stopDemo();resetDevice("nepřipojeno");return}
+ const d=st.device;if(!d)return;
+ if(st.phase==="moving")manualEnd();
+ try{await d.stop()}catch(_){}
+ try{await d.close()}catch(_){}
+ if(st.device===d)resetDevice("nepřipojeno");
+}
+function startDemo(){
+ if(st.source)return;
+ st.source="demo";st.sampleIndex=0;st.period=1/rate();st.lastValid=null;st.buffer=[];st.missed=0;
+ ui.connection.textContent="UKÁZKA – simulovaná data";ui.connect.disabled=true;ui.disconnect.disabled=false;ui.demo.disabled=true;
+ setPhase("idle","Simulace: po spuštění se vozík rozjede a vrátí.");
+ let n=0;const direction=sign(),start=direction===1?0.40:1.8;
+ st.demoTimer=setInterval(()=>{
+  const t=n*st.period;n++;
+  // Klid 0,7 s, pak zrychlený pohyb do 2 s a odraz.
+  const move=Math.max(0,t-0.7),turn=1.9;
+  const traveled=move<=turn?0.27*move*move:0.27*turn*turn-Math.min(0.36,0.8*(move-turn));
+  const noise=0.0015*Math.sin(n*1.74);
+  onPoint(start+direction*traveled+noise,true);
+  if(t>5.8){stopDemo();if(st.phase==="moving")manualEnd();}
+ },st.period*1000);
+}
+function stopDemo(){if(st.demoTimer!=null){clearInterval(st.demoTimer);st.demoTimer=null}}
+function draw(){
+ const el=ui.chart,ctx=el.getContext("2d"),rect=el.getBoundingClientRect(),dpr=Math.min(window.devicePixelRatio||1,2),w=Math.max(10,Math.round(rect.width*dpr)),h=Math.max(10,Math.round(rect.height*dpr));
+ if(el.width!==w||el.height!==h){el.width=w;el.height=h}
+ ctx.clearRect(0,0,w,h);ctx.fillStyle="#fff";ctx.fillRect(0,0,w,h);
+ const arr=st.chart==="s"?st.records:st.derived;
+ const key=st.chart==="s"?"s":"v",unit=st.chart==="s"?"m":"m/s";
+ const left=55*dpr,right=14*dpr,top=25*dpr,bottom=38*dpr,W=w-left-right,H=h-top-bottom;
+ if(W<10||H<10)return;
+ const values=arr.map(p=>p[key]).filter(Number.isFinite),tmax=Math.max(1,(st.records.at(-1)||{t:0}).t*1.08);
+ let min=Math.min(0,...values),max=Math.max(0,...values);if(max-min<0.1){max+=0.05;min-=0.05}
+ const pad=(max-min)*0.12;max+=pad;min-=pad;
+ ctx.strokeStyle="#e2e8f0";ctx.lineWidth=dpr;ctx.font=(11*dpr)+"px system-ui";ctx.fillStyle="#64748b";
+ for(let i=0;i<=5;i++){const x=left+i*W/5;ctx.beginPath();ctx.moveTo(x,top);ctx.lineTo(x,top+H);ctx.stroke();ctx.textAlign="center";ctx.fillText(fmt(i*tmax/5,1),x,top+H+18*dpr)}
+ for(let i=0;i<=4;i++){const y=top+i*H/4;ctx.beginPath();ctx.moveTo(left,y);ctx.lineTo(left+W,y);ctx.stroke();ctx.textAlign="right";ctx.fillText(fmt(max-(max-min)*i/4,2),left-7*dpr,y+4*dpr)}
+ ctx.fillStyle="#475467";ctx.font="700 "+(12*dpr)+"px system-ui";ctx.textAlign="left";ctx.fillText(key+" ["+unit+"]",left,16*dpr);ctx.textAlign="right";ctx.fillText("t [s]",w-10*dpr,h-5*dpr);
+ ctx.strokeStyle=key==="s"?"#2563eb":"#15803d";ctx.lineWidth=2.8*dpr;ctx.lineJoin="round";ctx.beginPath();
+ let started=false;for(const p of arr){const yval=p[key];if(!Number.isFinite(yval))continue;const x=left+(p.t/tmax)*W,y=top+(max-yval)/(max-min)*H;if(!started){ctx.moveTo(x,y);started=true}else ctx.lineTo(x,y)}if(started)ctx.stroke();
+ ctx.strokeStyle="#94a3b8";ctx.strokeRect(left,top,W,H);
+}
+function downloadCSV(){
+ if(!st.derived.length)return;
+ const f=n=>Number.isFinite(n)?n.toFixed(5).replace(".",","):"";
+ const lines=["cas_s;draha_m;rychlost_m_s;zrychleni_m_s2",...st.derived.map(p=>[f(p.t),f(p.s),f(p.v),f(p.a)].join(";"))];
+ const blob=new Blob(["\uFEFF"+lines.join("\r\n")],{type:"text/csv;charset=utf-8"});
+ const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download="vernier-vozik-"+new Date().toISOString().slice(0,10)+".csv";document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+ui.arm.addEventListener("click",arm);ui.abort.addEventListener("click",manualEnd);ui.demo.addEventListener("click",startDemo);ui.connect.addEventListener("click",connect);ui.disconnect.addEventListener("click",disconnect);
+ui.csv.addEventListener("click",downloadCSV);ui.rowStep.addEventListener("change",redrawTable);
+document.querySelectorAll("[data-chart]").forEach(b=>b.addEventListener("click",()=>{st.chart=b.dataset.chart;document.querySelectorAll("[data-chart]").forEach(x=>x.classList.toggle("sel",x===b));draw()}));
+if(!navigator.bluetooth){$("ble").disabled=true;$("bleLabel").title="Tento prohlížeč nepodporuje Web Bluetooth";if(navigator.hid)$("usb").checked=true}
+if(!navigator.hid){$("usb").disabled=true;$("usbLabel").title="Tento prohlížeč nepodporuje USB WebHID";if(navigator.bluetooth)$("ble").checked=true}
+window.addEventListener("resize",draw);
+renderOptions();setPhase("idle","Připoj sonar nebo vyzkoušej simulaci.");ui.phase.textContent="Nepřipojeno";draw();
+})();
+</script></body></html>
