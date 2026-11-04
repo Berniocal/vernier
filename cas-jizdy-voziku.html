@@ -173,7 +173,8 @@ function arm(){
  const recent=st.buffer.filter(p=>p.valid).slice(-12);
  if(recent.length<5){setMessage("Ještě čekám na několik platných hodnot vzdálenosti.");return}
  const sorted=recent.map(p=>p.d).sort((a,b)=>a-b);
- const mid=sorted[Math.floor(sorted.length/2)];
+ const middle=Math.floor(sorted.length/2);
+ const mid=sorted.length%2?sorted[middle]:(sorted[middle-1]+sorted[middle])/2;
  if(sorted[sorted.length-1]-sorted[0]>0.015){setMessage("Vozík se ještě pohybuje nebo měření kolísá. Ustav vozík do klidu.");return}
  if(ui.endMode.value==="calibrated"){
   const d=calibratedDistance();
