@@ -186,6 +186,7 @@ function arm(){
  // Šum polohy v klidu odhadneme před puštěním vozíku, nikoli až při pohybu.
  const diffs=recent.map(p=>Math.abs(p.d-mid)).sort((a,b)=>a-b);
  st.stationaryNoise=diffs[Math.floor(diffs.length/2)]||0;
+ st.lastStill={t:recent[recent.length-1].t,d:recent[recent.length-1].d};
  st.base=mid;st.demoStart=st.sampleIndex*st.period;st.demoOffset=sign()*(mid-(sign()===1?0.40:1.8));st.begin=NaN;st.peak=null;st.records=[];st.derived=[];st.consecutiveReverse=0;st.armedAt=recent[recent.length-1].t;st.endReason="";
  st.buffer=recent.slice(-12);
  ui.resultNote.textContent="Čekám na rozjezd. Čas 0 s bude poslední stabilní vzorek těsně před začátkem pohybu.";
@@ -245,7 +246,8 @@ function findLastStationarySample(confirmThreshold){
  const moving=after[firstMoving];
  const previous=clean.filter(p=>p.t<moving.t-1e-8 &&
    Math.abs(p.d-st.base)<=Math.max(0.008,2*noiseFloor));
- return previous.length?previous[previous.length-1]:null;
+ // Uložená poslední klidová poloha přežije i dlouhé čekání.
+ return previous.length?previous[previous.length-1]:(st.lastStill||null);
 }
 function onPoint(distance,fromDemo){
  // Časová osa vychází z periody senzoru. Několik hodnot v jednom BLE paketu
@@ -261,7 +263,10 @@ function onPoint(distance,fromDemo){
  // pohybem by jinak vytvořil falešné maximum dráhy a zrychlení.
  const history=st.buffer.filter(p=>p.valid&&p.t>=t-0.35).slice(-6);
  let outlier=false;
- if(history.length>=4&&(st.phase==="moving"||st.phase==="armed")){
+ let followsQuadratic=false;
+ // Při čekání na rozjezd nikdy nevyhazujeme prudký posun vozíku
+ // jen proto, že se liší od předchozí klidové polohy.
+ if(history.length>=4&&st.phase==="moving"){
   const n=history.length,mt=history.reduce((a,p)=>a+p.t,0)/n,md=history.reduce((a,p)=>a+p.d,0)/n;
   let xx=0,xy=0;
   for(const p of history){xx+=(p.t-mt)**2;xy+=(p.t-mt)*(p.d-md)}
@@ -270,8 +275,30 @@ function onPoint(distance,fromDemo){
   const recentStep=Math.abs(slope*st.period);
   const tolerance=Math.max(0.04,0.02+0.22*recentStep);
   if(Math.abs(distance-expected)>tolerance)outlier=true;
+  // Lineární odhad při prudkém rozjezdu systematicky podhodnocuje
+  // přírůstky vzdálenosti. Povolíme je, pokud zapadají do kvadratického
+  // pokračování POSLEDNÍCH tří platných bodů (rovnoměrné zrychlování).
+  const last3=history.slice(-3);
+  if(last3.length===3&&t-last3[2].t<=2.5*st.period){
+   let prediction=0;
+   for(let j=0;j<3;j++){
+    let weight=1;
+    for(let k=0;k<3;k++)if(j!==k){
+     const denom=last3[j].t-last3[k].t;
+     if(Math.abs(denom)<1e-9){weight=NaN;break;}
+     weight*=(t-last3[k].t)/denom;
+    }
+    prediction+=weight*last3[j].d;
+   }
+   if(Number.isFinite(prediction)&&
+      Math.abs(distance-prediction)<=Math.max(0.042,0.17*Math.abs(prediction-last3[2].d))){
+    followsQuadratic=true;
+    outlier=false;
+   }
+  }
  }
- if((st.phase==="armed"||st.phase==="moving")&&st.lastValid&&Math.abs(distance-st.lastValid.d)>Math.max(0.20,3.0*(t-st.lastValid.t)))outlier=true;
+ if(st.phase==="moving"&&!followsQuadratic&&st.lastValid&&
+    Math.abs(distance-st.lastValid.d)>Math.max(0.20,3.0*(t-st.lastValid.t)))outlier=true;
  if(outlier){
   st.qualityRejected++;
   st.buffer.push({t,d:NaN,valid:false});if(st.buffer.length>80)st.buffer.shift();
@@ -282,6 +309,24 @@ function onPoint(distance,fromDemo){
  st.lastValid={t,d:distance};
  st.latest=distance;ui.liveDistance.textContent=fmt(distance,3);
  st.buffer.push({t,d:distance,valid:true});if(st.buffer.length>80)st.buffer.shift();
+ if(st.phase==="armed"){
+  // Izolovaný falešný odraz: vzdálenost náhle uskočí a hned se vrátí.
+  const trio=st.buffer.filter(p=>p.valid).slice(-3);
+  if(trio.length===3){
+   const [prev,suspect,now]=trio;
+   const jump=Math.abs(suspect.d-prev.d),back=Math.abs(suspect.d-now.d);
+   if(jump>0.035&&back>0.035&&Math.abs(now.d-prev.d)<Math.max(0.015,0.2*Math.min(jump,back))){
+    suspect.valid=false;
+    st.qualityRejected++;
+   }
+  }
+  const near=st.buffer.filter(p=>p.valid).slice(-5);
+  const tolerance=Math.max(0.004,4*(st.stationaryNoise||0));
+  if(near.length>=4&&near.every(p=>Math.abs(p.d-st.base)<tolerance)&&
+      Math.max(...near.map(p=>p.d))-Math.min(...near.map(p=>p.d))<0.007){
+   st.lastStill={t:near[near.length-1].t,d:near[near.length-1].d};
+  }
+ }
  if(st.phase!=="armed"&&st.phase!=="moving")return;
  if(st.phase==="armed"){
   const projected=sign()*(distance-st.base);
@@ -289,8 +334,15 @@ function onPoint(distance,fromDemo){
   if(projected<threshold)return;
   // Předpotvrzení pohybu: alespoň dvě nedávné hodnoty musí ukazovat
   // stejný směr, aby samotný jednorázový ultrazvukový šum nespustil čas.
-  const near=st.buffer.filter(p=>p.valid&&p.t>=t-0.25);
-  if(near.length<3||sign()*(near[near.length-1].d-near[Math.max(0,near.length-3)].d)<0.002)return;
+  const near=st.buffer.filter(p=>p.valid&&p.t>=t-0.35);
+  if(near.length<3)return;
+  const now=near[near.length-1],prev=near[near.length-2],before=near[near.length-3];
+  const sNow=sign()*(now.d-st.base),sPrev=sign()*(prev.d-st.base),sBefore=sign()*(before.d-st.base);
+  // Dva vzorky v očekávaném směru potvrdí pohyb; osamělý odraz ne.
+  const jitter=Math.max(0.004,3*(st.stationaryNoise||0));
+  if(now.t-prev.t>3*st.period+1e-8||prev.t-before.t>5*st.period+1e-8||
+     sPrev<Math.max(0.004,threshold*0.45)||
+     sNow<sPrev-jitter||sNow-sBefore<Math.max(0.003,2*(st.stationaryNoise||0)))return;
   const stationary=findLastStationarySample(threshold);
   if(!stationary)return; // Bez změřeného klidového vzorku čas nedomýšlíme.
   st.begin=stationary.t;
