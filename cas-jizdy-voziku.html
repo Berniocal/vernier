@@ -233,7 +233,7 @@ function findLastStationarySample(confirmThreshold){
  // Jemný pohyb pod spouštěcím prahem lze rozpoznat zpětně, když
  // navazuje na několik jednoznačně se vzdalujících/přibližujících bodů.
  // Tím nevynecháme začátek rovnoměrně zrychleného pohybu z klidu.
- const weakMotion=Math.max(0.001,Math.min(0.0025,1.5*(st.stationaryNoise||0)));
+ const weakMotion=Math.max(0.0007,Math.min(0.0015,0.8*(st.stationaryNoise||0)));
  let firstMoving=movingIndex;
  for(let j=movingIndex-1;j>=Math.max(0,movingIndex-5);j--){
   const now=sign()*(after[j].d-st.base);
