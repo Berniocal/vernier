@@ -81,7 +81,7 @@ function setPhase(p,description){
  ui.arm.disabled=!modeReady()||(p==="armed"||p==="moving");
  ui.abort.disabled=!(p==="armed"||p==="moving");
  ui.arm.textContent=p==="finished"?"Nové měření":"Spustit měření";
- for(const id of settingIds){if(id!=="rowStep")ui[id].disabled=p==="armed"||p==="moving"}
+ for(const id of settingIds){if(id!=="rowStep")ui[id].disabled=p==="armed"||p==="moving"||(id==="rate"&&modeReady())}
  ui.csv.disabled=!st.derived.length;
 }
 function renderOptions(){
@@ -132,7 +132,7 @@ function arm(){
  const sorted=recent.map(p=>p.d).sort((a,b)=>a-b);
  const mid=sorted[Math.floor(sorted.length/2)];
  if(sorted[sorted.length-1]-sorted[0]>0.015){setMessage("Vozík se ještě pohybuje nebo měření kolísá. Ustav vozík do klidu.");return}
- st.base=mid;st.begin=NaN;st.peak=null;st.records=[];st.derived=[];st.consecutiveReverse=0;st.armedAt=recent[recent.length-1].t;st.endReason="";
+ st.base=mid;st.demoStart=st.sampleIndex*st.period;st.demoOffset=sign()*(mid-(sign()===1?0.40:1.8));st.begin=NaN;st.peak=null;st.records=[];st.derived=[];st.consecutiveReverse=0;st.armedAt=recent[recent.length-1].t;st.endReason="";
  st.buffer=recent.slice(-12);
  ui.resultNote.textContent="Čekám na pohyb ve zvoleném směru. Čas začne běžet až při skutečném rozjezdu.";
  setPhase("armed","Vozík připraven. Pusť závaží.");
@@ -205,17 +205,17 @@ function onPoint(distance,fromDemo){
  // Otočení: počkáme na potvrzený ústup od maxima, čas však ukončíme v maximu.
  const reverse=Math.max(0.005,Number(ui.reverse.value)/1000||0.015);
  if(st.peak.s-current.s>=reverse)st.consecutiveReverse++;else st.consecutiveReverse=0;
- if(ui.endMode.value==="turn"&&st.peak.s>=0.04&&st.consecutiveReverse>=2){
-  finish(st.peak.t,"Zachycen první obrat vozíku.");
+ if(st.peak.s>=0.04&&st.consecutiveReverse>=2){
+  finish(st.peak.t,ui.endMode.value==="distance"?"Vozík se obrátil před dosažením zadané dráhy.":"Zachycen první obrat vozíku.");
   return;
  }
  // Bez odrazu se vozík může v konci zastavit. Tuto situaci detekujeme
  // až po dlouhém klidu blízko dosaženého maxima.
  const still=Math.max(0.25,Number(ui.still.value)/1000||0.5);
- if(ui.endMode.value==="turn"&&st.peak.s>=0.04&&rel-st.peak.t>=still&&st.peak.s-current.s<0.006){
+ if(st.peak.s>=0.04&&rel-st.peak.t>=still&&st.peak.s-current.s<0.006){
   const tail=st.records.filter(p=>p.t>=rel-still);
   const span=tail.length?Math.max(...tail.map(p=>p.s))-Math.min(...tail.map(p=>p.s)):Infinity;
-  if(span<=0.008){finish(st.peak.t,"Vozík se zastavil na konci dráhy.");return}
+  if(span<=0.008){finish(st.peak.t,ui.endMode.value==="distance"?"Vozík se zastavil před dosažením zadané dráhy.":"Vozík se zastavil na konci dráhy.");return}
  }
  const maxSec=Number(ui.maxSec.value)||12;
  if(rel>=maxSec){finish(Math.min(st.peak.t,rel),"Dosažen nastavený časový limit; použito poslední maximum.");return}
@@ -314,11 +314,11 @@ function startDemo(){
  st.demoTimer=setInterval(()=>{
   const t=n*st.period;n++;
   // Klid 0,7 s, pak zrychlený pohyb do 2 s a odraz.
-  const move=Math.max(0,t-0.7),turn=1.9;
-  const traveled=move<=turn?0.27*move*move:0.27*turn*turn-Math.min(0.36,0.8*(move-turn));
+  const move=(st.phase==="armed"||st.phase==="moving"||st.phase==="finished")?Math.max(0,t-st.demoStart-0.45):0,turn=1.9;
+  const traveled=(st.demoOffset||0)+(move<=turn?0.27*move*move:0.27*turn*turn-Math.min(0.36,0.8*(move-turn)));
   const noise=0.0015*Math.sin(n*1.74);
   onPoint(start+direction*traveled+noise,true);
-  if(t>5.8){stopDemo();if(st.phase==="moving")manualEnd();}
+
  },st.period*1000);
 }
 function stopDemo(){if(st.demoTimer!=null){clearInterval(st.demoTimer);st.demoTimer=null}}
