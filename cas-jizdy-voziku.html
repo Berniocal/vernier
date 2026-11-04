@@ -182,9 +182,12 @@ function arm(){
   if(sign()*(st.calibEnd-mid)<0.035){setMessage("Uložený cíl není před vozíkem ve zvoleném směru.");return}
  }
  st.qualityRejected=0;st.qualityWarning="";
+ // Šum polohy v klidu odhadneme před puštěním vozíku, nikoli až při pohybu.
+ const diffs=recent.map(p=>Math.abs(p.d-mid)).sort((a,b)=>a-b);
+ st.stationaryNoise=diffs[Math.floor(diffs.length/2)]||0;
  st.base=mid;st.demoStart=st.sampleIndex*st.period;st.demoOffset=sign()*(mid-(sign()===1?0.40:1.8));st.begin=NaN;st.peak=null;st.records=[];st.derived=[];st.consecutiveReverse=0;st.armedAt=recent[recent.length-1].t;st.endReason="";
  st.buffer=recent.slice(-12);
- ui.resultNote.textContent="Čekám na pohyb ve zvoleném směru. Čas začne běžet až při skutečném rozjezdu.";
+ ui.resultNote.textContent="Čekám na rozjezd. Čas 0 s bude poslední stabilní vzorek těsně před začátkem pohybu.";
  setPhase("armed","Vozík připraven. Pusť závaží.");
  refreshResults();
 }
@@ -204,6 +207,33 @@ function finish(endTime,reason){
  const quality=st.qualityRejected?" Pozor: vyřazeno "+st.qualityRejected+" podezřelých odrazů.":"";
  ui.resultNote.textContent=reason+quality+discrepancy+" Zaznamenána pouze první jízda; zpětný pohyb se nezapočítává.";
  refreshResults();
+}
+function findLastStationarySample(confirmThreshold){
+ // Detekci pohybu použijeme pouze jako potvrzení. Zpětně najdeme
+ // PRVNÍ přesvědčivě pohybující se vzorek a vezmeme bod těsně před ním.
+ // Neděláme t=0 z prvního vzorku, který překročil spouštěcí práh.
+ const clean=st.buffer.filter(p=>p.valid);
+ const after=clean.filter(p=>p.t>=st.armedAt-1e-8);
+ const noiseFloor=Math.max(0.003,Math.min(0.006,confirmThreshold*0.35),
+                           Math.min(0.008,3*(st.stationaryNoise||0)));
+ const growth=Math.max(0.002,noiseFloor*0.5);
+ let movingIndex=-1;
+ for(let i=0;i<after.length;i++){
+  const advance=sign()*(after[i].d-st.base);
+  if(advance<noiseFloor)continue;
+  // První překročení šumu musí být potvrzeno dalším růstem vzdálenosti
+  // během nejbližších několika vzorků (při příjezdu analogicky poklesem).
+  if(after.slice(i+1,i+5).some(p=>sign()*(p.d-st.base)>=advance+growth)){
+   movingIndex=i;
+   break;
+  }
+ }
+ if(movingIndex<0)movingIndex=after.findIndex(p=>sign()*(p.d-st.base)>=noiseFloor);
+ if(movingIndex<0)return null;
+ const moving=after[movingIndex];
+ const previous=clean.filter(p=>p.t<moving.t-1e-8 &&
+   Math.abs(p.d-st.base)<=Math.max(0.008,2*noiseFloor));
+ return previous.length?previous[previous.length-1]:null;
 }
 function onPoint(distance,fromDemo){
  // Časová osa vychází z periody senzoru. Několik hodnot v jednom BLE paketu
@@ -249,16 +279,16 @@ function onPoint(distance,fromDemo){
   // stejný směr, aby samotný jednorázový ultrazvukový šum nespustil čas.
   const near=st.buffer.filter(p=>p.valid&&p.t>=t-0.25);
   if(near.length<3||sign()*(near[near.length-1].d-near[Math.max(0,near.length-3)].d)<0.002)return;
-  const onset=Math.max(0.002,Math.min(threshold*0.3,0.004));
-  let first=st.buffer.filter(p=>p.valid&&p.t>=st.armedAt).find(p=>sign()*(p.d-st.base)>=onset);
-  if(!first)first={t,d:distance};
-  st.begin=first.t;
-  st.records=st.buffer.filter(p=>p.valid&&p.t>=st.begin&&p.t<=t)
+  const stationary=findLastStationarySample(threshold);
+  if(!stationary)return; // Bez změřeného klidového vzorku čas nedomýšlíme.
+  st.begin=stationary.t;
+  st.base=stationary.d;
+  st.records=st.buffer.filter(p=>p.valid&&p.t>=st.begin-1e-8&&p.t<=t)
     .map(p=>({t:p.t-st.begin,s:Math.max(0,sign()*(p.d-st.base))}));
-  // Nulový bod pro s(0), bez extrapolace před detekovanou první změnu.
-  if(st.records.length)st.records[0].s=0;
+  // Úplně první řádek odpovídá skutečně změřené poslední klidové poloze.
+  st.records[0]={t:0,s:0};
   st.peak={t:st.records[st.records.length-1].t,s:Math.max(...st.records.map(p=>p.s))};
-  setPhase("moving","Měřím první jízdu...");
+  setPhase("moving","Měřím jízdu od posledního klidového vzorku.");
   refreshResults();
   return;
  }
