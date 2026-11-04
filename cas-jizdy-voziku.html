@@ -7,7 +7,7 @@
 <script src="https://unpkg.com/@vernier/godirect/dist/godirect.min.umd.js"></script>
 <style>
 :root{--bg:#f4f5f7;--card:#fff;--text:#111827;--muted:#667085;--border:#dbe1e8;--accent:#2563eb;--green:#15803d;--warn:#b45309;--red:#b42318}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:15px system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}button,input,select{font:inherit}button{cursor:pointer;border:1px solid var(--border);border-radius:10px;background:#fff;color:inherit;padding:10px 13px;font-weight:700}button:disabled{opacity:.42;cursor:not-allowed}button:not(:disabled):hover{filter:brightness(.96)}.primary{background:#111827;color:white;border-color:#111827}.blue{background:#2563eb;border-color:#2563eb;color:white}.danger{color:#b42318}.page{max-width:1150px;margin:auto;padding:14px 14px 35px}.top{display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:space-between;margin-bottom:13px}h1{font-size:clamp(1.3rem,3vw,1.9rem);letter-spacing:-.035em;margin:0}.topRight{display:flex;gap:7px;flex-wrap:wrap;align-items:center}.seg{display:flex;padding:3px;border-radius:12px;background:#e8edf3;border:1px solid #d6dde7;gap:2px}.seg label{position:relative;border-radius:9px;padding:7px 10px;font-size:.86rem;font-weight:750;cursor:pointer}.seg label:has(input:checked){background:white;box-shadow:0 1px 4px #0002}.seg input{position:absolute;opacity:0}.seg label:has(input:disabled){opacity:.38}.card{background:var(--card);border:1px solid var(--border);border-radius:17px;box-shadow:0 1px 3px #0f172a0a;padding:17px;margin:0 0 12px}.banner{font-weight:750;font-size:.92rem;margin-bottom:7px}.muted{color:var(--muted)}.small{font-size:.82rem;line-height:1.5}.good{color:var(--green)}.warn{color:var(--warn)}.error{color:var(--red)}.hero{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:14px;align-items:stretch}.timerPanel{display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;background:#f8fafc;border:1px solid #e5eaf0;border-radius:14px;padding:20px 10px}.state{font-weight:820;text-transform:uppercase;letter-spacing:.09em;font-size:.84rem;color:var(--muted)}.timer{font-weight:820;letter-spacing:-.065em;font-size:clamp(4rem,10vw,7.7rem);font-variant-numeric:tabular-nums;line-height:1.25}.timer small{font-size:.26em;letter-spacing:0;margin-left:5px;color:var(--muted)}.actionRow{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:10px}.actionRow button{min-width:125px}.metrics{display:grid;grid-template-columns:repeat(2,1fr);gap:9px}.metric{background:#f8fafc;border:1px solid #e5eaf0;border-radius:13px;padding:15px;min-height:112px;display:flex;justify-content:center;flex-direction:column}.metric .label{font-size:.82rem;color:var(--muted)}.metric strong{font-size:clamp(1.45rem,3vw,2.1rem);font-variant-numeric:tabular-nums;line-height:1.5}.sectionTitle{font-size:1.04rem;margin:0 0 11px;font-weight:800}.setup{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.field{display:flex;flex-direction:column;gap:5px;min-width:0}.field label,.field .legend{font-size:.83rem;color:#475467;font-weight:700}.field select,.field input{height:42px;border:1px solid #ccd4de;border-radius:9px;padding:8px 11px;max-width:100%;background:white;color:#111827;width:100%}.hint{font-size:.76rem;color:#667085;line-height:1.4}.more{border-top:1px solid var(--border);margin-top:13px;padding-top:11px}.more summary{font-weight:750;cursor:pointer;color:#475467}.advanced{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:11px;margin-top:12px}.chartToolbar{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px}.graph{width:100%;height:275px;display:block}.chartbtns{display:flex;gap:6px;flex-wrap:wrap}.chartbtns button{padding:7px 11px}.chartbtns button.sel{background:#e8f0ff;border-color:#93b6fb;color:#1d4ed8}.tablebar{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px}.tablebar select{padding:6px;border:1px solid var(--border);border-radius:7px;background:white}.scrollTable{max-height:400px;overflow:auto;border:1px solid var(--border);border-radius:10px}table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}th,td{border-bottom:1px solid #e9edf2;padding:8px 12px;text-align:right;white-space:nowrap}th{position:sticky;top:0;background:#f1f5f9;font-size:.82rem;color:#475467}td{font-size:.88rem}tr:last-child td{border-bottom:0}.footerHint{font-size:.78rem;color:var(--muted);margin:8px 0 0;line-height:1.5}.connectState{font-weight:700;font-size:.8rem}.connectState:empty{display:none}.realtime{font-size:.82rem;color:#475467;text-align:center;margin-top:8px}.device{font-size:.77rem;color:var(--muted)}.hidden{display:none!important}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:15px system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}button,input,select{font:inherit}button{cursor:pointer;border:1px solid var(--border);border-radius:10px;background:#fff;color:inherit;padding:10px 13px;font-weight:700}button:disabled{opacity:.42;cursor:not-allowed}button:not(:disabled):hover{filter:brightness(.96)}.primary{background:#111827;color:white;border-color:#111827}.blue{background:#2563eb;border-color:#2563eb;color:white}.danger{color:#b42318}.page{max-width:1150px;margin:auto;padding:14px 14px 35px}.top{display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:space-between;margin-bottom:13px}h1{font-size:clamp(1.3rem,3vw,1.9rem);letter-spacing:-.035em;margin:0}.topRight{display:flex;gap:7px;flex-wrap:wrap;align-items:center}.seg{display:flex;padding:3px;border-radius:12px;background:#e8edf3;border:1px solid #d6dde7;gap:2px}.seg label{position:relative;border-radius:9px;padding:7px 10px;font-size:.86rem;font-weight:750;cursor:pointer}.seg label:has(input:checked){background:white;box-shadow:0 1px 4px #0002}.seg input{position:absolute;opacity:0}.seg label:has(input:disabled){opacity:.38}.card{background:var(--card);border:1px solid var(--border);border-radius:17px;box-shadow:0 1px 3px #0f172a0a;padding:17px;margin:0 0 12px}.banner{font-weight:750;font-size:.92rem;margin-bottom:7px}.muted{color:var(--muted)}.small{font-size:.82rem;line-height:1.5}.good{color:var(--green)}.warn{color:var(--warn)}.error{color:var(--red)}.hero{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:14px;align-items:stretch}.timerPanel{display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;background:#f8fafc;border:1px solid #e5eaf0;border-radius:14px;padding:20px 10px}.state{font-weight:820;text-transform:uppercase;letter-spacing:.09em;font-size:.84rem;color:var(--muted)}.timer{font-weight:820;letter-spacing:-.065em;font-size:clamp(4rem,10vw,7.7rem);font-variant-numeric:tabular-nums;line-height:1.25}.timer small{font-size:.26em;letter-spacing:0;margin-left:5px;color:var(--muted)}.actionRow{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:10px}.actionRow button{min-width:125px}.metrics{display:grid;grid-template-columns:repeat(2,1fr);gap:9px}.metric{background:#f8fafc;border:1px solid #e5eaf0;border-radius:13px;padding:15px;min-height:112px;display:flex;justify-content:center;flex-direction:column}.metric .label{font-size:.82rem;color:var(--muted)}.metric strong{font-size:clamp(1.45rem,3vw,2.1rem);font-variant-numeric:tabular-nums;line-height:1.5}.sectionTitle{font-size:1.04rem;margin:0 0 11px;font-weight:800}.setup{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.field{display:flex;flex-direction:column;gap:5px;min-width:0}.field label,.field .legend{font-size:.83rem;color:#475467;font-weight:700}.field select,.field input{height:42px;border:1px solid #ccd4de;border-radius:9px;padding:8px 11px;max-width:100%;background:white;color:#111827;width:100%}.hint{font-size:.76rem;color:#667085;line-height:1.4}.calibBox{margin-top:14px;padding:13px;border:1px solid #cddcf1;background:#f6f9ff;border-radius:12px}.calibActions{display:flex;gap:7px;flex-wrap:wrap;margin:9px 0}.calibActions button{padding:9px 12px}.calibInfo{font-size:.85rem;color:#334155;line-height:1.65}.calibInfo b{font-variant-numeric:tabular-nums}.more{border-top:1px solid var(--border);margin-top:13px;padding-top:11px}.more summary{font-weight:750;cursor:pointer;color:#475467}.advanced{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:11px;margin-top:12px}.chartToolbar{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px}.graph{width:100%;height:275px;display:block}.chartbtns{display:flex;gap:6px;flex-wrap:wrap}.chartbtns button{padding:7px 11px}.chartbtns button.sel{background:#e8f0ff;border-color:#93b6fb;color:#1d4ed8}.tablebar{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px}.tablebar select{padding:6px;border:1px solid var(--border);border-radius:7px;background:white}.scrollTable{max-height:400px;overflow:auto;border:1px solid var(--border);border-radius:10px}table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}th,td{border-bottom:1px solid #e9edf2;padding:8px 12px;text-align:right;white-space:nowrap}th{position:sticky;top:0;background:#f1f5f9;font-size:.82rem;color:#475467}td{font-size:.88rem}tr:last-child td{border-bottom:0}.footerHint{font-size:.78rem;color:var(--muted);margin:8px 0 0;line-height:1.5}.connectState{font-weight:700;font-size:.8rem}.connectState:empty{display:none}.realtime{font-size:.82rem;color:#475467;text-align:center;margin-top:8px}.device{font-size:.77rem;color:var(--muted)}.hidden{display:none!important}
 @media(max-width:790px){.page{padding:8px 7px 20px}.top{gap:6px}.topRight{width:100%}.hero{grid-template-columns:1fr}.timerPanel{padding:10px}.timer{font-size:clamp(3.7rem,15vw,6rem)}.metric{padding:11px;min-height:90px}.setup{grid-template-columns:1fr 1fr;gap:10px}.advanced{grid-template-columns:repeat(2,1fr)}.card{padding:12px}.graph{height:250px}}@media(max-width:420px){.setup{grid-template-columns:1fr}.timer{font-size:3.8rem}.actionRow button{min-width:108px;padding:9px}.metric strong{font-size:1.5rem}.topRight button{padding:8px 10px;font-size:.85rem}th,td{padding:7px}}
 </style>
 </head>
@@ -36,9 +36,16 @@
 <h2 class="sectionTitle">Nastavení pokusu</h2>
 <div class="setup">
 <div class="field"><label for="direction">Umístění sonaru a směr jízdy</label><select id="direction"><option value="away">Sonar u startu – vozík odjíždí</option><option value="toward">Sonar u cíle – vozík přijíždí</option></select><span class="hint" id="directionHint">Vzdálenost roste. Zastavit při prvním maximu / obratu.</span></div>
-<div class="field"><label for="endMode">Kdy měření skončí</label><select id="endMode"><option value="turn">Automaticky při zastavení nebo obratu</option><option value="distance">Po ujetí zadané dráhy</option></select><span class="hint" id="endHint">Odraz a návrat se nezapočítají.</span></div>
+<div class="field"><label for="endMode">Kdy měření skončí</label><select id="endMode"><option value="turn">Automaticky při zastavení nebo obratu</option><option value="distance">Po ujetí zadané dráhy</option><option value="calibrated">Při dosažení kalibrovaného cíle</option></select><span class="hint" id="endHint">Odraz a návrat se nezapočítají.</span></div>
 <div id="targetWrap" class="field hidden"><label for="target">Požadovaná dráha (m)</label><input id="target" type="number" min="0.02" max="3.3" step="0.05" value="0.8"><span class="hint">Čas se dopočítá mezi dvěma vzorky.</span></div>
 <div class="field"><label for="rate">Frekvence sonaru</label><select id="rate"><option value="20">20 Hz (doporučeno)</option><option value="30">30 Hz (maximum)</option><option value="10">10 Hz</option></select><span class="hint" id="rateHint">Jeden vzorek každých 0,05 s.</span></div>
+</div>
+<div class="calibBox">
+<div class="sectionTitle" style="margin:0">Přesné vymezení dráhy – dvě polohy vozíku</div>
+<div class="hint">Postav vozík na začátek, ulož polohu. Potom ho přemísti na konec a ulož polohu cíle. Sonar musí po celou dobu mířit na stejnou odraznou plochu vozíku.</div>
+<div class="calibActions"><button id="captureStart" disabled>1. Uložit začátek</button><button id="captureEnd" disabled>2. Uložit konec</button><button id="clearCalibration" disabled>Vymazat kalibraci</button></div>
+<div id="calibInfo" class="calibInfo">Začátek: <b>—</b> · Konec: <b>—</b> · Rozdíl: <b>—</b></div>
+<div class="hint">Po uložení obou poloh se automaticky vybere ukončení v cíli. Poté vozík vrať na začátek a spusť měření. Aplikace nebude dopočítávat dráhu až k odrazu.</div>
 </div>
 <details class="more"><summary>Pokročilá nastavení detekce</summary><div class="advanced">
 <div class="field"><label for="trigger">Potvrzení rozjezdu (mm)</label><input id="trigger" type="number" min="3" max="60" value="10" step="1"></div>
@@ -63,8 +70,8 @@
 (function(){
 "use strict";
 const $=id=>document.getElementById(id);
-const ui={phase:$("phase"),time:$("time"),message:$("message"),distance:$("distance"),vavg:$("vavg"),aavg:$("aavg"),vend:$("vend"),liveDistance:$("liveDistance"),connection:$("connection"),arm:$("arm"),abort:$("abort"),demo:$("demo"),connect:$("connect"),disconnect:$("disconnect"),direction:$("direction"),directionHint:$("directionHint"),endMode:$("endMode"),endHint:$("endHint"),target:$("target"),targetWrap:$("targetWrap"),rate:$("rate"),rateHint:$("rateHint"),trigger:$("trigger"),reverse:$("reverse"),still:$("still"),maxSec:$("maxSec"),chart:$("chart"),rows:$("rows"),rowStep:$("rowStep"),csv:$("csv"),resultNote:$("resultNote")};
-const st={device:null,sensor:null,phase:"idle",source:null,sampleIndex:0,period:0.05,lastPos:null,lastValid:null,latest:NaN,buffer:[],base:NaN,begin:NaN,peak:null,records:[],derived:[],lastDraw:0,endReason:"",demoTimer:null,chart:"s",missed:0,consecutiveReverse:0,armedAt:0};
+const ui={phase:$("phase"),time:$("time"),message:$("message"),distance:$("distance"),vavg:$("vavg"),aavg:$("aavg"),vend:$("vend"),liveDistance:$("liveDistance"),connection:$("connection"),arm:$("arm"),abort:$("abort"),demo:$("demo"),connect:$("connect"),disconnect:$("disconnect"),direction:$("direction"),directionHint:$("directionHint"),endMode:$("endMode"),endHint:$("endHint"),target:$("target"),targetWrap:$("targetWrap"),rate:$("rate"),rateHint:$("rateHint"),trigger:$("trigger"),reverse:$("reverse"),still:$("still"),maxSec:$("maxSec"),chart:$("chart"),rows:$("rows"),rowStep:$("rowStep"),csv:$("csv"),resultNote:$("resultNote"),captureStart:$("captureStart"),captureEnd:$("captureEnd"),clearCalibration:$("clearCalibration"),calibInfo:$("calibInfo")};
+const st={device:null,sensor:null,phase:"idle",source:null,sampleIndex:0,period:0.05,lastPos:null,lastValid:null,latest:NaN,buffer:[],base:NaN,begin:NaN,peak:null,records:[],derived:[],lastDraw:0,endReason:"",demoTimer:null,chart:"s",missed:0,consecutiveReverse:0,armedAt:0,calibStart:NaN,calibEnd:NaN,qualityRejected:0,qualityWarning:""};
 const settingIds=["direction","endMode","target","rate","trigger","reverse","still","maxSec","rowStep"];
 for(const key of settingIds){try{const v=localStorage.getItem("vernier-cart-time-"+key);if(v!=null)ui[key].value=v}catch(_){}}
 for(const key of settingIds)ui[key].addEventListener("change",()=>{try{localStorage.setItem("vernier-cart-time-"+key,ui[key].value)}catch(_){ }renderOptions();});
@@ -82,13 +89,49 @@ function setPhase(p,description){
  ui.abort.disabled=!(p==="armed"||p==="moving");
  ui.arm.textContent=p==="finished"?"Nové měření":"Spustit měření";
  for(const id of settingIds){if(id!=="rowStep")ui[id].disabled=p==="armed"||p==="moving"||(id==="rate"&&modeReady())}
+ const canCapture=modeReady()&&p!=="armed"&&p!=="moving";
+ ui.captureStart.disabled=ui.captureEnd.disabled=!canCapture;
+ ui.clearCalibration.disabled=!canCapture||(!Number.isFinite(st.calibStart)&&!Number.isFinite(st.calibEnd));
  ui.csv.disabled=!st.derived.length;
 }
 function renderOptions(){
  ui.targetWrap.classList.toggle("hidden",ui.endMode.value!=="distance");
  ui.directionHint.textContent=ui.direction.value==="away"?"Vzdálenost roste; konec na prvním maximu.":"Vzdálenost klesá; konec na prvním minimu.";
- ui.endHint.textContent=ui.endMode.value==="distance"?"Ukončení po přesně zadané dráze.":"Odraz a návrat se nezapočítají.";
+ ui.endHint.textContent=ui.endMode.value==="calibrated"?"Ukončení po dosažení staticky změřeného cíle.":ui.endMode.value==="distance"?"Ukončení po přesně zadané dráze.":"Odraz a návrat se nezapočítají.";
  ui.rateHint.textContent="Jeden vzorek každých "+fmt(1/rate(),3)+" s.";
+}
+function calibratedDistance(){return Number.isFinite(st.calibStart)&&Number.isFinite(st.calibEnd)?sign()*(st.calibEnd-st.calibStart):NaN}
+function refreshCalibration(){
+ const d=calibratedDistance();
+ ui.calibInfo.innerHTML="Začátek: <b>"+fmt(st.calibStart,3)+" m</b> · Konec: <b>"+fmt(st.calibEnd,3)+" m</b> · Dráha: <b>"+(Number.isFinite(d)?fmt(d,3)+" m":"—")+"</b>";
+ if(st.phase!=="armed"&&st.phase!=="moving")setPhase(st.phase);
+}
+function stablePosition(){
+ const data=st.buffer.filter(p=>p.valid).slice(-10);
+ if(data.length<7){setMessage("Kalibrace: čekám alespoň na 7 platných vzorků.");return NaN}
+ const span=Math.max(...data.map(p=>p.d))-Math.min(...data.map(p=>p.d));
+ if(span>0.015){setMessage("Kalibrace: drž vozík v klidu, vzdálenost kolísá o "+fmt(span*1000,0)+" mm.");return NaN}
+ const sorted=data.map(p=>p.d).sort((a,b)=>a-b);
+ return (sorted[4]+sorted[5])/2;
+}
+function capture(which){
+ if(!modeReady()||st.phase==="armed"||st.phase==="moving")return;
+ const d=stablePosition();if(!Number.isFinite(d))return;
+ if(which==="start")st.calibStart=d;else st.calibEnd=d;
+ const dist=calibratedDistance();
+ if(Number.isFinite(dist)&&dist>=0.04){
+  ui.endMode.value="calibrated";
+  setMessage("Polohy uloženy. Vrať vozík na start a spusť měření.");
+ }else if(Number.isFinite(dist)){
+  setMessage("Polohy uloženy, ale ve zvoleném směru není cíl dál než začátek. Zkontroluj orientaci sonaru.");
+ }else setMessage("Poloha uložena. Nyní přemísti vozík na druhý konec dráhy.");
+ refreshCalibration();renderOptions();
+}
+function clearCalibration(){
+ if(st.phase==="armed"||st.phase==="moving")return;
+ st.calibStart=st.calibEnd=NaN;
+ if(ui.endMode.value==="calibrated")ui.endMode.value="turn";
+ refreshCalibration();renderOptions();setMessage("Kalibrace smazána.");
 }
 function updateKPIs(){
  const arr=st.derived, rec=st.records, last=arr[arr.length-1];
@@ -132,6 +175,13 @@ function arm(){
  const sorted=recent.map(p=>p.d).sort((a,b)=>a-b);
  const mid=sorted[Math.floor(sorted.length/2)];
  if(sorted[sorted.length-1]-sorted[0]>0.015){setMessage("Vozík se ještě pohybuje nebo měření kolísá. Ustav vozík do klidu.");return}
+ if(ui.endMode.value==="calibrated"){
+  const d=calibratedDistance();
+  if(!Number.isFinite(d)||d<0.04){setMessage("Kalibrace chybí nebo je špatně zvolen směr pohybu.");return}
+  if(Math.abs(mid-st.calibStart)>0.025){setMessage("Vozík není na uloženém začátku (rozdíl "+fmt(Math.abs(mid-st.calibStart)*100,1)+" cm). Vrať jej do výchozí polohy.");return}
+  if(sign()*(st.calibEnd-mid)<0.035){setMessage("Uložený cíl není před vozíkem ve zvoleném směru.");return}
+ }
+ st.qualityRejected=0;st.qualityWarning="";
  st.base=mid;st.demoStart=st.sampleIndex*st.period;st.demoOffset=sign()*(mid-(sign()===1?0.40:1.8));st.begin=NaN;st.peak=null;st.records=[];st.derived=[];st.consecutiveReverse=0;st.armedAt=recent[recent.length-1].t;st.endReason="";
  st.buffer=recent.slice(-12);
  ui.resultNote.textContent="Čekám na pohyb ve zvoleném směru. Čas začne běžet až při skutečném rozjezdu.";
@@ -146,7 +196,13 @@ function finish(endTime,reason){
  if(last.t<endTime&&st.peak&&Math.abs(st.peak.t-endTime)<1e-6){st.records.push({t:endTime,s:Math.max(0,st.peak.s)})}
  st.endReason=reason;
  setPhase("finished",reason);
- ui.resultNote.textContent=reason+" Zaznamenána pouze první jízda; zpětný pohyb se nezapočítává.";
+ const ref=calibratedDistance();
+ const observed=st.records[st.records.length-1].s;
+ const diff=Number.isFinite(ref)?Math.abs(observed-ref):NaN;
+ const discrepancy=Number.isFinite(ref)&&diff>0.025&&ui.endMode.value!=="calibrated"
+   ?" Pozor: naměřená dráha se liší od staticky určené o "+fmt(diff*100,1)+" cm. Zkontroluj odraz sonaru na konci dráhy.":"";
+ const quality=st.qualityRejected?" Pozor: vyřazeno "+st.qualityRejected+" podezřelých odrazů.":"";
+ ui.resultNote.textContent=reason+quality+discrepancy+" Zaznamenána pouze první jízda; zpětný pohyb se nezapočítává.";
  refreshResults();
 }
 function onPoint(distance,fromDemo){
@@ -158,9 +214,28 @@ function onPoint(distance,fromDemo){
  const valid=Number.isFinite(distance)&&distance>=min&&distance<=max;
  if(!valid){st.buffer.push({t,d:NaN,valid:false});if(st.buffer.length>80)st.buffer.shift();st.missed++;if(st.phase==="moving"&&st.missed>=8)setMessage("Sonar ztratil vozík. Zkontroluj odraznou destičku nebo měření ukonči ručně.");return}
  st.missed=0;
- // Jednotlivé falešné ultrazvukové odrazy se nesmí stát novým koncem dráhy.
- if(st.lastValid&&Math.abs(distance-st.lastValid.d)>Math.max(0.22,5*st.period)){
-  st.buffer.push({t,d:NaN,valid:false});if(st.buffer.length>80)st.buffer.shift();return;
+ // Ochrana před falešnými ozvěnami: porovnáme nové měření s lokální
+ // předpovědí z několika skutečných vzorků. Skok 10 cm nad plynulým
+ // pohybem by jinak vytvořil falešné maximum dráhy a zrychlení.
+ const history=st.buffer.filter(p=>p.valid&&p.t>=t-0.35).slice(-6);
+ let outlier=false;
+ if(history.length>=4&&(st.phase==="moving"||st.phase==="armed")){
+  const n=history.length,mt=history.reduce((a,p)=>a+p.t,0)/n,md=history.reduce((a,p)=>a+p.d,0)/n;
+  let xx=0,xy=0;
+  for(const p of history){xx+=(p.t-mt)**2;xy+=(p.t-mt)*(p.d-md)}
+  const slope=xx>0?xy/xx:0;
+  const expected=md+slope*(t-mt);
+  const recentStep=Math.abs(slope*st.period);
+  const tolerance=Math.max(0.04,0.02+0.22*recentStep);
+  if(Math.abs(distance-expected)>tolerance)outlier=true;
+ }
+ if(st.lastValid&&Math.abs(distance-st.lastValid.d)>Math.max(0.20,3.0*(t-st.lastValid.t)))outlier=true;
+ if(outlier){
+  st.qualityRejected++;
+  st.buffer.push({t,d:NaN,valid:false});if(st.buffer.length>80)st.buffer.shift();
+  if(st.qualityRejected>=2)st.qualityWarning="Sonar zachytil podezřelé skoky vzdálenosti; tyto body ignoruji.";
+  if(st.phase==="moving")setMessage(st.qualityWarning||"Vyřazen podezřelý ultrazvukový odraz.");
+  return;
  }
  st.lastValid={t,d:distance};
  st.latest=distance;ui.liveDistance.textContent=fmt(distance,3);
@@ -193,11 +268,11 @@ function onPoint(distance,fromDemo){
  let current={t:rel,s:Math.max(0,s)};
  const previous=st.records[st.records.length-1];
  if(previous&&current.t<=previous.t)return;
- const target=Number(ui.target.value);
- if(ui.endMode.value==="distance"&&Number.isFinite(target)&&target>0&&previous&&previous.s<target&&current.s>=target){
+ const target=ui.endMode.value==="calibrated"?sign()*(st.calibEnd-st.base):Number(ui.target.value);
+ if((ui.endMode.value==="distance"||ui.endMode.value==="calibrated")&&Number.isFinite(target)&&target>0&&previous&&previous.s<target&&current.s>=target){
   const f=(target-previous.s)/(current.s-previous.s);
   st.records.push({t:previous.t+f*(current.t-previous.t),s:target});
-  finish(st.records[st.records.length-1].t,"Dokončena zadaná dráha "+fmt(target,3)+" m.");
+  finish(st.records[st.records.length-1].t,(ui.endMode.value==="calibrated"?"Dosažen uložený cíl, dráha ":"Dokončena zadaná dráha ")+fmt(target,3)+" m.");
   return;
  }
  st.records.push(current);
@@ -206,7 +281,7 @@ function onPoint(distance,fromDemo){
  const reverse=Math.max(0.005,Number(ui.reverse.value)/1000||0.015);
  if(st.peak.s-current.s>=reverse)st.consecutiveReverse++;else st.consecutiveReverse=0;
  if(st.peak.s>=0.04&&st.consecutiveReverse>=2){
-  finish(st.peak.t,ui.endMode.value==="distance"?"Vozík se obrátil před dosažením zadané dráhy.":"Zachycen první obrat vozíku.");
+  finish(st.peak.t,ui.endMode.value==="turn"?"Zachycen první obrat vozíku.":"Vozík se obrátil před dosažením cíle.");
   return;
  }
  // Bez odrazu se vozík může v konci zastavit. Tuto situaci detekujeme
@@ -215,7 +290,7 @@ function onPoint(distance,fromDemo){
  if(st.peak.s>=0.04&&rel-st.peak.t>=still&&st.peak.s-current.s<0.006){
   const tail=st.records.filter(p=>p.t>=rel-still);
   const span=tail.length?Math.max(...tail.map(p=>p.s))-Math.min(...tail.map(p=>p.s)):Infinity;
-  if(span<=0.008){finish(st.peak.t,ui.endMode.value==="distance"?"Vozík se zastavil před dosažením zadané dráhy.":"Vozík se zastavil na konci dráhy.");return}
+  if(span<=0.008){finish(st.peak.t,ui.endMode.value==="turn"?"Vozík se zastavil na konci dráhy.":"Vozík se zastavil před dosažením cíle.");return}
  }
  const maxSec=Number(ui.maxSec.value)||12;
  if(rel>=maxSec){finish(Math.min(st.peak.t,rel),"Dosažen nastavený časový limit; použito poslední maximum.");return}
@@ -226,11 +301,11 @@ function manualEnd(){
  if(st.phase==="moving"){finish(st.peak?st.peak.t:st.records[st.records.length-1].t,"Ukončeno ručně; použit poslední dosažený krajní bod.");return}
 }
 function resetDevice(message){
- st.device=null;st.sensor=null;st.source=null;st.lastValid=null;st.buffer=[];st.phase="idle";
+ st.device=null;st.sensor=null;st.source=null;st.lastValid=null;st.buffer=[];st.phase="idle";st.calibStart=st.calibEnd=NaN;
  ui.connect.disabled=false;ui.disconnect.disabled=true;ui.connection.textContent=message||"nepřipojeno";
  ui.arm.disabled=true;ui.abort.disabled=true;ui.demo.disabled=false;ui.connect.textContent="Připojit sonar";
  for(const id of settingIds)if(id!=="rowStep")ui[id].disabled=false;
- ui.phase.textContent="Nepřipojeno";setMessage(message||"Připoj sonar.");
+ ui.phase.textContent="Nepřipojeno";refreshCalibration();setMessage(message||"Připoj sonar.");
 }
 function toMeters(v,unit){const n=Number(v);if(!Number.isFinite(n))return NaN;const u=String(unit||"m").toLowerCase().trim();return u==="cm"?n/100:u==="mm"?n/1000:n}
 function selectMotion(device){
@@ -348,12 +423,14 @@ function downloadCSV(){
  const blob=new Blob(["\uFEFF"+lines.join("\r\n")],{type:"text/csv;charset=utf-8"});
  const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download="vernier-vozik-"+new Date().toISOString().slice(0,10)+".csv";document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
+ui.captureStart.addEventListener("click",()=>capture("start"));ui.captureEnd.addEventListener("click",()=>capture("end"));ui.clearCalibration.addEventListener("click",clearCalibration);
 ui.arm.addEventListener("click",arm);ui.abort.addEventListener("click",manualEnd);ui.demo.addEventListener("click",startDemo);ui.connect.addEventListener("click",connect);ui.disconnect.addEventListener("click",disconnect);
 ui.csv.addEventListener("click",downloadCSV);ui.rowStep.addEventListener("change",redrawTable);
 document.querySelectorAll("[data-chart]").forEach(b=>b.addEventListener("click",()=>{st.chart=b.dataset.chart;document.querySelectorAll("[data-chart]").forEach(x=>x.classList.toggle("sel",x===b));draw()}));
 if(!navigator.bluetooth){$("ble").disabled=true;$("bleLabel").title="Tento prohlížeč nepodporuje Web Bluetooth";if(navigator.hid)$("usb").checked=true}
 if(!navigator.hid){$("usb").disabled=true;$("usbLabel").title="Tento prohlížeč nepodporuje USB WebHID";if(navigator.bluetooth)$("ble").checked=true}
 window.addEventListener("resize",draw);
-renderOptions();setPhase("idle","Připoj sonar nebo vyzkoušej simulaci.");ui.phase.textContent="Nepřipojeno";draw();
+if(ui.endMode.value==="calibrated")ui.endMode.value="turn";
+refreshCalibration();renderOptions();setPhase("idle","Připoj sonar nebo vyzkoušej simulaci.");ui.phase.textContent="Nepřipojeno";draw();
 })();
 </script></body></html>
